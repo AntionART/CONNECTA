@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Chat - CONNECTA{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Conversation List Sidebar -->
+    <div class="conversation-list">
+        <div class="p-4 border-b border-gray-200">
+            <input type="text" id="search-conversations" placeholder="Buscar conversación..."
+                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        </div>
+        <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
+            <button onclick="filterConversations('all')" class="conv-filter active text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700" data-filter="all">Todas</button>
+            <button onclick="filterConversations('open')" class="conv-filter text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="open">Abiertas</button>
+            <button onclick="filterConversations('closed')" class="conv-filter text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="closed">Cerradas</button>
+        </div>
+        <div id="conversations-list" class="flex-1 overflow-y-auto">
+            <div class="empty-state py-12">
+                <p class="text-sm">Cargando conversaciones...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel">
+        <!-- Chat Header -->
+        <div id="chat-header" class="bg-white border-b border-gray-200 px-6 py-3 hidden">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 id="chat-contact-name" class="font-semibold text-gray-900"></h2>
+                    <p id="chat-phone" class="text-xs text-gray-500"></p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div id="chat-labels" class="flex items-center gap-1"></div>
+                    <select id="assign-agent" class="text-xs border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="">Sin asignar</option>
+                    </select>
+                    <button onclick="toggleLabelsPanel()" class="text-gray-400 hover:text-gray-600" title="Etiquetas">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                    </button>
+                    <button onclick="toggleInfoPanel()" class="text-gray-400 hover:text-gray-600" title="Info del contacto" id="btn-toggle-info">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </button>
+                    <button onclick="toggleConversationStatus()" id="btn-toggle-status" class="text-xs px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-50">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+            <!-- Labels panel (hidden by default) -->
+            <div id="labels-panel" class="hidden mt-2 p-2 bg-gray-50 rounded-md">
+                <div id="available-labels" class="flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Messages area -->
+            <div class="flex flex-col flex-1">
+                <div id="messages-container" class="messages-container">
+                    <div class="empty-state">
+                        <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        <p class="text-sm">Selecciona una conversación para empezar</p>
+                    </div>
+                </div>
+
+                <!-- Message Input -->
+                <div id="message-input-area" class="bg-white border-t border-gray-200 p-4 hidden">
+                    <form id="send-message-form" class="flex gap-3">
+                        <input type="text" id="message-input" placeholder="Escribe un mensaje..."
+                               class="flex-1 rounded-md border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                               autocomplete="off">
+                        <button type="submit"
+                                class="rounded-md bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            Enviar
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Info Panel -->
+            <div id="info-panel" class="hidden info-panel">
+                <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900 text-sm">Info del contacto</h3>
+                    <button onclick="toggleInfoPanel()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto">
+                    <!-- Contact info -->
+                    <div class="p-4 border-b border-gray-100">
+                        <p id="info-contact-name" class="font-medium text-gray-900"></p>
+                        <p id="info-phone" class="text-xs text-gray-500 mt-0.5"></p>
+                    </div>
+
+                    <!-- Pets section -->
+                    <div class="p-4 border-b border-gray-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Mascotas</h4>
+                            <button onclick="openPetModalFromChat()" class="text-xs text-indigo-600 hover:text-indigo-500 font-medium">+ Agregar</button>
+                        </div>
+                        <div id="info-pets-list">
+                            <p class="text-xs text-gray-400">Cargando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Appointments section -->
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Citas</h4>
+                            <button onclick="openAppointmentModalFromChat()" id="btn-new-appointment" class="text-xs text-indigo-600 hover:text-indigo-500 font-medium hidden">+ Agendar</button>
+                        </div>
+                        <div id="info-appointments-list">
+                            <p class="text-xs text-gray-400">Selecciona una mascota para ver citas</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pet Modal (in chat) -->
+<div id="chat-pet-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="closeChatPetModal()"></div>
+        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 id="chat-pet-modal-title" class="text-lg font-semibold text-gray-900 mb-4">Nueva mascota</h3>
+            <form id="chat-pet-form" class="space-y-4">
+                <input type="hidden" id="chat-pet-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                    <input type="text" id="chat-pet-name" required class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Especie</label>
+                        <select id="chat-pet-species" required class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <option value="">Seleccionar</option>
+                            <option value="dog">Perro</option>
+                            <option value="cat">Gato</option>
+                            <option value="bird">Ave</option>
+                            <option value="rabbit">Conejo</option>
+                            <option value="other">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Raza</label>
+                        <input type="text" id="chat-pet-breed" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Edad (años)</label>
+                        <input type="number" id="chat-pet-age" min="0" step="0.1" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Peso (kg)</label>
+                        <input type="number" id="chat-pet-weight" min="0" step="0.1" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre del dueño</label>
+                    <input type="text" id="chat-pet-owner-name" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeChatPetModal()" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                    <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Appointment Modal (in chat) -->
+<div id="chat-appointment-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="closeChatAppointmentModal()"></div>
+        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Nueva cita</h3>
+            <form id="chat-appointment-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Mascota</label>
+                    <select id="chat-apt-pet" required class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="">Seleccionar mascota</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha y hora</label>
+                    <input type="datetime-local" id="chat-apt-date" required class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Motivo</label>
+                    <textarea id="chat-apt-reason" required rows="3" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Veterinario</label>
+                    <input type="text" id="chat-apt-vet" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeChatAppointmentModal()" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                    <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Agendar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/socket_client.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat_info_panel.js') }}"></script>
+{% endblock %}
