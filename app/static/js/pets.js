@@ -16,24 +16,30 @@ function renderPetsTable() {
     const tbody = document.getElementById('pets-table-body');
 
     if (pets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500">No hay mascotas registradas</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-sm text-slate-400">No hay mascotas registradas</td></tr>';
         return;
     }
 
     const speciesMap = {dog: 'Perro', cat: 'Gato', bird: 'Ave', rabbit: 'Conejo', other: 'Otro'};
+    const speciesIcon = {dog: '🐕', cat: '🐈', bird: '🐦', rabbit: '🐇', other: '🐾'};
 
     tbody.innerHTML = pets.map(pet => `
         <tr>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${pet.name}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${speciesMap[pet.species] || pet.species}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${pet.breed || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${pet.age_years ? pet.age_years + ' años' : '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${pet.weight_kg ? pet.weight_kg + ' kg' : '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${pet.owner_name || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${pet.owner_phone}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                <button onclick="editPet('${pet._id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
-                <button onclick="deletePet('${pet._id}')" class="text-red-600 hover:text-red-900">Eliminar</button>
+            <td>
+                <div class="flex items-center gap-2.5">
+                    <span class="text-lg">${speciesIcon[pet.species] || '🐾'}</span>
+                    <span class="font-semibold text-slate-900">${pet.name}</span>
+                </div>
+            </td>
+            <td>${speciesMap[pet.species] || pet.species}</td>
+            <td>${pet.breed || '<span class="text-slate-300">-</span>'}</td>
+            <td>${pet.age_years ? pet.age_years + ' a' : '<span class="text-slate-300">-</span>'}</td>
+            <td>${pet.weight_kg ? pet.weight_kg + ' kg' : '<span class="text-slate-300">-</span>'}</td>
+            <td>${pet.owner_name || '<span class="text-slate-300">-</span>'}</td>
+            <td><span class="font-mono text-xs">${pet.owner_phone}</span></td>
+            <td class="text-right">
+                <button onclick="editPet('${pet._id}')" class="link-action mr-3">Editar</button>
+                <button onclick="deletePet('${pet._id}')" class="text-sm font-medium text-slate-400 hover:text-red-600 transition-colors">Eliminar</button>
             </td>
         </tr>
     `).join('');
@@ -99,7 +105,7 @@ function editPet(petId) {
 }
 
 async function deletePet(petId) {
-    if (!confirm('¿Estás seguro de eliminar esta mascota?')) return;
+    if (!confirm('Estas seguro de eliminar esta mascota?')) return;
 
     const res = await fetch(`/api/pets/${petId}`, {method: 'DELETE'});
     if (res.ok) {
