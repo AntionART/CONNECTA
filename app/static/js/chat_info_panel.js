@@ -6,10 +6,10 @@ let currentPhone = null;
 
 const speciesMap = {dog: 'Perro', cat: 'Gato', bird: 'Ave', rabbit: 'Conejo', other: 'Otro'};
 const statusStyles = {
-    scheduled: 'bg-blue-100 text-blue-700',
-    confirmed: 'bg-green-100 text-green-700',
-    completed: 'bg-gray-100 text-gray-700',
-    cancelled: 'bg-red-100 text-red-700',
+    scheduled: 'bg-blue-50 text-blue-600 border border-blue-100',
+    confirmed: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+    completed: 'bg-slate-100 text-slate-600',
+    cancelled: 'bg-red-50 text-red-600 border border-red-100',
 };
 const statusLabels = {
     scheduled: 'Programada',
@@ -39,8 +39,10 @@ async function loadContactInfo() {
     if (!conv) return;
 
     currentPhone = conv.phone_number;
-    document.getElementById('info-contact-name').textContent = conv.contact_name || 'Sin nombre';
+    const name = conv.contact_name || 'Sin nombre';
+    document.getElementById('info-contact-name').textContent = name;
     document.getElementById('info-phone').textContent = conv.phone_number;
+    document.getElementById('info-avatar-text').textContent = name.substring(0, 2).toUpperCase();
 
     await loadContactPets();
 }
@@ -55,16 +57,15 @@ async function loadContactPets() {
         contactPets = await res.json();
 
         if (contactPets.length === 0) {
-            container.innerHTML = '<p class="text-xs text-gray-400">No hay mascotas registradas</p>';
+            container.innerHTML = '<p class="text-xs text-slate-400">No hay mascotas registradas</p>';
             document.getElementById('btn-new-appointment').classList.add('hidden');
-            document.getElementById('info-appointments-list').innerHTML = '<p class="text-xs text-gray-400">Agrega una mascota primero</p>';
+            document.getElementById('info-appointments-list').innerHTML = '<p class="text-xs text-slate-400">Agrega una mascota primero</p>';
             return;
         }
 
         document.getElementById('btn-new-appointment').classList.remove('hidden');
         renderContactPets();
 
-        // Auto-select first pet
         if (!selectedPetId || !contactPets.find(p => p._id === selectedPetId)) {
             selectPet(contactPets[0]._id);
         }
@@ -79,20 +80,18 @@ function renderContactPets() {
     container.innerHTML = contactPets.map(pet => {
         const isSelected = pet._id === selectedPetId;
         return `
-            <div class="flex items-center justify-between p-2 rounded-md cursor-pointer mb-1 ${isSelected ? 'bg-indigo-50 border border-indigo-200' : 'hover:bg-gray-50 border border-transparent'}"
+            <div class="flex items-center justify-between p-2.5 rounded-xl cursor-pointer mb-1.5 transition-smooth ${isSelected ? 'bg-red-50 border border-red-100' : 'hover:bg-slate-50 border border-transparent'}"
                  onclick="selectPet('${pet._id}')">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900">${pet.name}</p>
-                    <p class="text-xs text-gray-500">${speciesMap[pet.species] || pet.species}${pet.breed ? ' - ' + pet.breed : ''}</p>
+                    <p class="text-sm font-semibold text-slate-900">${pet.name}</p>
+                    <p class="text-xs text-slate-400">${speciesMap[pet.species] || pet.species}${pet.breed ? ' - ' + pet.breed : ''}</p>
                     <div class="flex gap-3 mt-0.5">
-                        ${pet.age_years ? `<span class="text-xs text-gray-400">${pet.age_years} años</span>` : ''}
-                        ${pet.weight_kg ? `<span class="text-xs text-gray-400">${pet.weight_kg} kg</span>` : ''}
+                        ${pet.age_years ? `<span class="text-[10px] text-slate-400">${pet.age_years} anos</span>` : ''}
+                        ${pet.weight_kg ? `<span class="text-[10px] text-slate-400">${pet.weight_kg} kg</span>` : ''}
                     </div>
                 </div>
-                <button onclick="event.stopPropagation(); editPetFromChat('${pet._id}')" class="text-gray-400 hover:text-indigo-600 ml-2" title="Editar">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                    </svg>
+                <button onclick="event.stopPropagation(); editPetFromChat('${pet._id}')" class="btn btn-ghost p-1" title="Editar">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                 </button>
             </div>
         `;
@@ -109,14 +108,14 @@ async function selectPet(petId) {
 // Load appointments for selected pet
 async function loadPetAppointments(petId) {
     const container = document.getElementById('info-appointments-list');
-    container.innerHTML = '<p class="text-xs text-gray-400">Cargando...</p>';
+    container.innerHTML = '<p class="text-xs text-slate-400">Cargando...</p>';
 
     try {
         const res = await fetch(`/api/appointments/by-pet/${petId}`);
         const appointments = await res.json();
 
         if (appointments.length === 0) {
-            container.innerHTML = '<p class="text-xs text-gray-400">No hay citas registradas</p>';
+            container.innerHTML = '<p class="text-xs text-slate-400">No hay citas registradas</p>';
             return;
         }
 
@@ -125,17 +124,17 @@ async function loadPetAppointments(petId) {
                 day: '2-digit', month: 'short', year: 'numeric',
                 hour: '2-digit', minute: '2-digit',
             }) : '-';
-            const style = statusStyles[apt.status] || 'bg-gray-100 text-gray-700';
+            const style = statusStyles[apt.status] || 'bg-slate-100 text-slate-600';
             const label = statusLabels[apt.status] || apt.status;
 
             return `
-                <div class="p-2 rounded-md border border-gray-100 mb-2">
+                <div class="p-2.5 rounded-xl border border-slate-100 mb-2">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-medium text-gray-700">${date}</span>
-                        <span class="text-xs px-1.5 py-0.5 rounded-full ${style}">${label}</span>
+                        <span class="text-xs font-semibold text-slate-700">${date}</span>
+                        <span class="badge ${style}">${label}</span>
                     </div>
-                    <p class="text-xs text-gray-600">${apt.reason}</p>
-                    ${apt.veterinarian ? `<p class="text-xs text-gray-400 mt-0.5">Vet: ${apt.veterinarian}</p>` : ''}
+                    <p class="text-xs text-slate-500">${apt.reason}</p>
+                    ${apt.veterinarian ? `<p class="text-[10px] text-slate-400 mt-0.5">Vet: ${apt.veterinarian}</p>` : ''}
                 </div>
             `;
         }).join('');
@@ -214,7 +213,6 @@ function openAppointmentModalFromChat() {
     document.getElementById('chat-appointment-modal').classList.remove('hidden');
     document.getElementById('chat-appointment-form').reset();
 
-    // Populate pet select with contact's pets
     const select = document.getElementById('chat-apt-pet');
     select.innerHTML = '<option value="">Seleccionar mascota</option>';
     contactPets.forEach(pet => {
@@ -248,7 +246,6 @@ document.getElementById('chat-appointment-form').addEventListener('submit', asyn
 
     if (res.ok) {
         closeChatAppointmentModal();
-        // Reload appointments for the selected pet
         const petId = data.pet_id;
         if (petId) {
             selectedPetId = petId;
