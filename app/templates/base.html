@@ -1,82 +1,106 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full bg-gray-50">
+<html lang="es" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CONNECTA{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
     {% block head %}{% endblock %}
 </head>
-<body class="h-full">
+<body class="h-full bg-[#F1F5F9]" style="font-family: 'Inter', system-ui, sans-serif;">
     {% if current_user.is_authenticated %}
-    <div class="min-h-full">
-        <!-- Navbar -->
-        <nav class="bg-indigo-600 shadow-lg">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div class="flex h-16 items-center justify-between">
-                    <div class="flex items-center gap-8">
-                        <a href="{{ url_for('dashboard.index') }}" class="text-white font-bold text-xl tracking-tight">
-                            CONNECTA
-                        </a>
-                        <div class="hidden md:flex items-center gap-1">
-                            <a href="{{ url_for('dashboard.index') }}"
-                               class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard') %}active{% endif %}">
-                                Dashboard
-                            </a>
-                            <a href="{{ url_for('chat.index') }}"
-                               class="nav-link {% if request.endpoint and request.endpoint.startswith('chat') %}active{% endif %}">
-                                Chat
-                                <span id="nav-unread-badge" class="hidden ml-1 inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">0</span>
-                            </a>
-                            <a href="{{ url_for('pets.index') }}"
-                               class="nav-link {% if request.endpoint and request.endpoint.startswith('pets') %}active{% endif %}">
-                                Mascotas
-                            </a>
-                            <a href="{{ url_for('appointments.index') }}"
-                               class="nav-link {% if request.endpoint and request.endpoint.startswith('appointments') %}active{% endif %}">
-                                Citas
-                            </a>
-                            {% if current_user.role == 'admin' %}
-                            <a href="{{ url_for('settings.index') }}"
-                               class="nav-link {% if request.endpoint and request.endpoint.startswith('settings') %}active{% endif %}">
-                                Settings
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <span class="text-indigo-200 text-sm">{{ current_user.display_name }}</span>
-                        <a href="{{ url_for('auth.logout') }}" class="text-indigo-200 hover:text-white text-sm">
-                            Salir
-                        </a>
-                    </div>
-                </div>
-            </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <a href="{{ url_for('dashboard.index') }}">
+                <div class="logo-icon">C</div>
+                <span class="logo-text">CONNECTA</span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <span class="sidebar-section-label">General</span>
+            <a href="{{ url_for('dashboard.index') }}"
+               class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard') %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="{{ url_for('chat.index') }}"
+               class="nav-link {% if request.endpoint and request.endpoint.startswith('chat') %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                Chat
+                <span id="nav-unread-badge" class="nav-badge hidden">0</span>
+            </a>
+
+            <span class="sidebar-section-label" style="margin-top: 0.5rem;">Gestionar</span>
+            <a href="{{ url_for('pets.index') }}"
+               class="nav-link {% if request.endpoint and request.endpoint.startswith('pets') %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                Mascotas
+            </a>
+            <a href="{{ url_for('appointments.index') }}"
+               class="nav-link {% if request.endpoint and request.endpoint.startswith('appointments') %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Citas
+            </a>
+
+            {% if current_user.role == 'admin' %}
+            <span class="sidebar-section-label" style="margin-top: 0.5rem;">Admin</span>
+            <a href="{{ url_for('settings.index') }}"
+               class="nav-link {% if request.endpoint and request.endpoint.startswith('settings') %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Configuracion
+            </a>
+            {% endif %}
         </nav>
 
-        <!-- Flash messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-4">
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar">{{ current_user.display_name[0] | upper }}</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name">{{ current_user.display_name }}</div>
+                    <div class="sidebar-user-role">{{ current_user.role }}</div>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-logout" title="Cerrar sesion">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="main-content">
+        <div class="max-w-5xl mx-auto px-6 pt-4">
             {% for category, message in messages %}
-            <div class="rounded-md p-4 mb-2 {% if category == 'error' %}bg-red-50 text-red-800{% else %}bg-green-50 text-green-800{% endif %}">
-                <p class="text-sm">{{ message }}</p>
+            <div class="rounded-xl p-3.5 mb-2 flex items-center gap-3 text-sm {% if category == 'error' %}bg-red-50 text-red-700 border border-red-100{% else %}bg-emerald-50 text-emerald-700 border border-emerald-100{% endif %}">
+                {% if category == 'error' %}
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {% else %}
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {% endif %}
+                {{ message }}
             </div>
             {% endfor %}
         </div>
-        {% endif %}
-        {% endwith %}
-
-        <!-- Toast container -->
-        <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2"></div>
-
-        <!-- Main content -->
-        <main>
-            {% block content %}{% endblock %}
-        </main>
     </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-3"></div>
+
+    <!-- Main content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
     {% else %}
     {% block public_content %}{% endblock %}
     {% endif %}
