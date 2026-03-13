@@ -34,15 +34,15 @@ function renderAppointmentsTable() {
     const tbody = document.getElementById('appointments-table-body');
 
     if (appointments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">No hay citas</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-sm text-slate-400">No hay citas</td></tr>';
         return;
     }
 
     const statusStyles = {
-        scheduled: 'bg-blue-100 text-blue-800',
-        confirmed: 'bg-green-100 text-green-800',
-        completed: 'bg-gray-100 text-gray-800',
-        cancelled: 'bg-red-100 text-red-800',
+        scheduled: 'bg-blue-50 text-blue-700 border border-blue-100',
+        confirmed: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+        completed: 'bg-slate-100 text-slate-600',
+        cancelled: 'bg-red-50 text-red-700 border border-red-100',
     };
 
     const statusLabels = {
@@ -58,27 +58,29 @@ function renderAppointmentsTable() {
             hour: '2-digit', minute: '2-digit',
         }) : '-';
         const petName = apt.pet?.name || 'Desconocida';
-        const style = statusStyles[apt.status] || 'bg-gray-100 text-gray-800';
+        const style = statusStyles[apt.status] || 'bg-slate-100 text-slate-600';
         const label = statusLabels[apt.status] || apt.status;
 
         return `
             <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${date}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${petName}</td>
-                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">${apt.reason}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${apt.veterinarian || '-'}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td>
+                    <span class="font-semibold text-slate-900">${date}</span>
+                </td>
+                <td>${petName}</td>
+                <td class="max-w-xs truncate">${apt.reason}</td>
+                <td>${apt.veterinarian || '<span class="text-slate-300">-</span>'}</td>
+                <td>
                     <select onchange="updateAppointmentStatus('${apt._id}', this.value)"
-                            class="text-xs rounded-full px-2 py-1 font-medium ${style} border-0 cursor-pointer">
+                            class="badge cursor-pointer border-0 outline-none ${style}" style="font-size: 0.6875rem;">
                         <option value="scheduled" ${apt.status === 'scheduled' ? 'selected' : ''}>Programada</option>
                         <option value="confirmed" ${apt.status === 'confirmed' ? 'selected' : ''}>Confirmada</option>
                         <option value="completed" ${apt.status === 'completed' ? 'selected' : ''}>Completada</option>
                         <option value="cancelled" ${apt.status === 'cancelled' ? 'selected' : ''}>Cancelada</option>
                     </select>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                    <button onclick="editAppointment('${apt._id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
-                    <button onclick="deleteAppointment('${apt._id}')" class="text-red-600 hover:text-red-900">Eliminar</button>
+                <td class="text-right">
+                    <button onclick="editAppointment('${apt._id}')" class="link-action mr-3">Editar</button>
+                    <button onclick="deleteAppointment('${apt._id}')" class="text-sm font-medium text-slate-400 hover:text-red-600 transition-colors">Eliminar</button>
                 </td>
             </tr>
         `;
@@ -148,7 +150,7 @@ async function updateAppointmentStatus(aptId, status) {
 }
 
 async function deleteAppointment(aptId) {
-    if (!confirm('¿Estás seguro de eliminar esta cita?')) return;
+    if (!confirm('Estas seguro de eliminar esta cita?')) return;
 
     const res = await fetch(`/api/appointments/${aptId}`, {method: 'DELETE'});
     if (res.ok) {
@@ -160,13 +162,11 @@ function filterAppointments(status) {
     currentStatusFilter = status;
 
     document.querySelectorAll('.apt-filter').forEach(btn => {
-        btn.classList.remove('active', 'bg-indigo-100', 'text-indigo-700');
-        btn.classList.add('bg-gray-100', 'text-gray-600');
+        btn.classList.remove('active');
     });
     const activeBtn = document.querySelector(`.apt-filter[data-filter="${status}"]`);
     if (activeBtn) {
-        activeBtn.classList.add('active', 'bg-indigo-100', 'text-indigo-700');
-        activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
+        activeBtn.classList.add('active');
     }
 
     loadAppointments();
