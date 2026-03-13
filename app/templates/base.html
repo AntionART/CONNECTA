@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CONNECTA{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full">
+    {% if current_user.is_authenticated %}
+    <div class="min-h-full">
+        <!-- Navbar -->
+        <nav class="bg-indigo-600 shadow-lg">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <div class="flex items-center gap-8">
+                        <a href="{{ url_for('dashboard.index') }}" class="text-white font-bold text-xl tracking-tight">
+                            CONNECTA
+                        </a>
+                        <div class="hidden md:flex items-center gap-1">
+                            <a href="{{ url_for('dashboard.index') }}"
+                               class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard') %}active{% endif %}">
+                                Dashboard
+                            </a>
+                            <a href="{{ url_for('chat.index') }}"
+                               class="nav-link {% if request.endpoint and request.endpoint.startswith('chat') %}active{% endif %}">
+                                Chat
+                                <span id="nav-unread-badge" class="hidden ml-1 inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">0</span>
+                            </a>
+                            <a href="{{ url_for('pets.index') }}"
+                               class="nav-link {% if request.endpoint and request.endpoint.startswith('pets') %}active{% endif %}">
+                                Mascotas
+                            </a>
+                            <a href="{{ url_for('appointments.index') }}"
+                               class="nav-link {% if request.endpoint and request.endpoint.startswith('appointments') %}active{% endif %}">
+                                Citas
+                            </a>
+                            {% if current_user.role == 'admin' %}
+                            <a href="{{ url_for('settings.index') }}"
+                               class="nav-link {% if request.endpoint and request.endpoint.startswith('settings') %}active{% endif %}">
+                                Settings
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-indigo-200 text-sm">{{ current_user.display_name }}</span>
+                        <a href="{{ url_for('auth.logout') }}" class="text-indigo-200 hover:text-white text-sm">
+                            Salir
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-4">
+            {% for category, message in messages %}
+            <div class="rounded-md p-4 mb-2 {% if category == 'error' %}bg-red-50 text-red-800{% else %}bg-green-50 text-green-800{% endif %}">
+                <p class="text-sm">{{ message }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Toast container -->
+        <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2"></div>
+
+        <!-- Main content -->
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+    {% block public_content %}{% endblock %}
+    {% endif %}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
