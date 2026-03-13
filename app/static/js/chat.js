@@ -54,6 +54,7 @@ function renderConversationList() {
     container.innerHTML = filtered.map(conv => {
         const isActive = currentConversationId === conv._id;
         const name = conv.contact_name || conv.phone_number;
+        const initials = name.substring(0, 2).toUpperCase();
         const preview = conv.last_message?.text || '';
         const previewTruncated = preview.length > 40 ? preview.substring(0, 40) + '...' : preview;
         const time = conv.last_message?.timestamp ? formatTime(conv.last_message.timestamp) : '';
@@ -62,21 +63,26 @@ function renderConversationList() {
         const labelsHtml = (conv.labels || []).map(labelName => {
             const label = allLabels.find(l => l.name === labelName);
             const color = label ? label.color : '#6B7280';
-            return `<span class="label-tag" style="background-color: ${color}20; color: ${color}">${label ? label.display_name : labelName}</span>`;
+            return `<span class="label-tag" style="background-color: ${color}15; color: ${color}">${label ? label.display_name : labelName}</span>`;
         }).join('');
 
         return `
             <div class="conversation-item ${isActive ? 'active' : ''}" onclick="selectConversation('${conv._id}')">
-                <div class="flex items-start justify-between">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                            <p class="text-sm font-medium text-gray-900 truncate">${name}</p>
-                            ${unread > 0 ? `<span class="inline-flex items-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-xs font-medium text-white">${unread}</span>` : ''}
-                        </div>
-                        <p class="text-xs text-gray-500 mt-0.5 truncate">${previewTruncated}</p>
-                        ${labelsHtml ? `<div class="flex gap-1 mt-1">${labelsHtml}</div>` : ''}
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0">
+                        <span class="text-xs font-bold text-slate-500">${initials}</span>
                     </div>
-                    <span class="text-xs text-gray-400 whitespace-nowrap ml-2">${time}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-semibold text-slate-900 truncate">${name}</p>
+                            <span class="text-[10px] text-slate-400 flex-shrink-0 ml-2">${time}</span>
+                        </div>
+                        <div class="flex items-center justify-between mt-0.5">
+                            <p class="text-xs text-slate-400 truncate">${previewTruncated}</p>
+                            ${unread > 0 ? `<span class="nav-badge ml-2 flex-shrink-0">${unread}</span>` : ''}
+                        </div>
+                        ${labelsHtml ? `<div class="flex gap-1 mt-1.5">${labelsHtml}</div>` : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -87,36 +93,28 @@ function renderConversationList() {
 async function selectConversation(conversationId) {
     currentConversationId = conversationId;
 
-    // Update active state in list
     document.querySelectorAll('.conversation-item').forEach(el => el.classList.remove('active'));
     event?.target?.closest('.conversation-item')?.classList.add('active');
 
-    // Show chat UI
     document.getElementById('chat-header').classList.remove('hidden');
     document.getElementById('message-input-area').classList.remove('hidden');
 
-    // Load conversation details
     const convRes = await fetch(`/api/conversations/${conversationId}`);
     const conv = await convRes.json();
 
-    document.getElementById('chat-contact-name').textContent = conv.contact_name || conv.phone_number;
+    const name = conv.contact_name || conv.phone_number;
+    document.getElementById('chat-contact-name').textContent = name;
     document.getElementById('chat-phone').textContent = conv.phone_number;
+    document.getElementById('chat-avatar-text').textContent = name.substring(0, 2).toUpperCase();
 
-    // Update status button
     const statusBtn = document.getElementById('btn-toggle-status');
     statusBtn.textContent = conv.status === 'open' ? 'Cerrar' : 'Reabrir';
 
-    // Update agent select
     const agentSelect = document.getElementById('assign-agent');
     agentSelect.value = conv.assigned_to || '';
 
-    // Render labels
     renderChatLabels(conv.labels || []);
-
-    // Load messages
     await loadMessages(conversationId);
-
-    // Update sidebar to reflect read state
     loadConversations();
 }
 
@@ -132,7 +130,7 @@ function renderMessages(messages) {
     const container = document.getElementById('messages-container');
 
     if (messages.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p class="text-sm">No hay mensajes aún</p></div>';
+        container.innerHTML = '<div class="empty-state"><p class="text-sm font-medium">No hay mensajes aun</p></div>';
         return;
     }
 
@@ -188,13 +186,11 @@ function filterConversations(status) {
     currentFilter = status;
 
     document.querySelectorAll('.conv-filter').forEach(btn => {
-        btn.classList.remove('active', 'bg-indigo-100', 'text-indigo-700');
-        btn.classList.add('bg-gray-100', 'text-gray-600');
+        btn.classList.remove('active');
     });
     const activeBtn = document.querySelector(`.conv-filter[data-filter="${status}"]`);
     if (activeBtn) {
-        activeBtn.classList.add('active', 'bg-indigo-100', 'text-indigo-700');
-        activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
+        activeBtn.classList.add('active');
     }
 
     loadConversations();
@@ -252,15 +248,15 @@ function renderAvailableLabels() {
         const isActive = currentLabels.includes(label.name);
         return `
             <button onclick="toggleLabel('${label.name}')"
-                    class="label-tag cursor-pointer ${isActive ? 'ring-2 ring-offset-1' : 'opacity-60'}"
-                    style="background-color: ${label.color}20; color: ${label.color}; ${isActive ? `ring-color: ${label.color}` : ''}">
+                    class="label-tag cursor-pointer transition-smooth ${isActive ? 'ring-2 ring-offset-1' : 'opacity-50 hover:opacity-80'}"
+                    style="background-color: ${label.color}15; color: ${label.color}; ${isActive ? `--tw-ring-color: ${label.color}` : ''}">
                 ${label.display_name}
             </button>
         `;
     }).join('');
 
     if (allLabels.length === 0) {
-        container.innerHTML = '<p class="text-xs text-gray-400">No hay etiquetas creadas</p>';
+        container.innerHTML = '<p class="text-xs text-slate-400">No hay etiquetas creadas</p>';
     }
 }
 
@@ -291,14 +287,13 @@ function renderChatLabels(labels) {
     container.innerHTML = labels.map(labelName => {
         const label = allLabels.find(l => l.name === labelName);
         const color = label ? label.color : '#6B7280';
-        return `<span class="label-tag" style="background-color: ${color}20; color: ${color}">${label ? label.display_name : labelName}</span>`;
+        return `<span class="label-tag" style="background-color: ${color}15; color: ${color}">${label ? label.display_name : labelName}</span>`;
     }).join('');
 }
 
 // Socket events for real-time updates
 socket.on('new_message', (data) => {
     if (data.conversation_id === currentConversationId) {
-        // Append message to current chat
         const container = document.getElementById('messages-container');
         const msg = data.message;
         const isOutbound = msg.direction === 'outbound';
@@ -306,7 +301,6 @@ socket.on('new_message', (data) => {
         const time = formatTime(msg.timestamp);
         const statusIcon = isOutbound ? getStatusIcon(msg.status) : '';
 
-        // Remove empty state if present
         const emptyState = container.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
 
@@ -320,7 +314,6 @@ socket.on('new_message', (data) => {
         container.scrollTop = container.scrollHeight;
     }
 
-    // Update sidebar
     loadConversations();
 });
 
