@@ -1,46 +1,44 @@
-# CONNECTA - Sistema Inteligente de Gestión Veterinaria
+# CONNECTA - Veterinary Management System
 
-Plataforma SaaS integrada en **WhatsApp Business** para clínicas veterinarias colombianas. Permite atención al cliente, agendamiento de citas, gestión de historiales clínicos y seguimiento post-consulta mediante conversaciones naturales en WhatsApp.
+SaaS platform integrated with **WhatsApp Business** for veterinary clinics. Enables customer service, appointment scheduling, clinical record management, and post-consultation follow-up through WhatsApp conversations.
 
-**Proyecto académico** — Diseño Funcional, FESC
-**Autores:** Erick Ocampo, Daniel Arteaga, Andrés Rodríguez
-**Docente:** Robinson Damian Gómez Sánchez
+**Academic project** — Functional Design, FESC
+**Authors:** Erick Ocampo, Daniel Arteaga, Andrés Rodríguez
+**Instructor:** Robinson Damian Gómez Sánchez
 
 ---
 
-## Arquitectura
+## Architecture
 
 ```
-Cliente WhatsApp → Evolution API → Backend Flask → MongoDB → Módulo IA
+WhatsApp Client → Evolution API → Flask Backend → MongoDB → AI Module
 ```
 
 **Stack:**
-- Backend: Python / Flask (Application Factory + Blueprints)
-- Base de datos: MongoDB (Docker en desarrollo, Atlas en producción)
-- Integración WhatsApp: Evolution API
-- Contenerización: Docker + Docker Compose
+- Backend: Python 3.11 / Flask 3.1 (Application Factory + Blueprints)
+- Database: MongoDB 7 (Docker for dev, Atlas for production)
+- WhatsApp Integration: Evolution API
+- Real-time: Flask-SocketIO + gevent
+- Auth: Flask-Login + Flask-Bcrypt
+- Containerization: Docker + Docker Compose
 
-## Estructura del proyecto
+## Project Structure
 
 ```
-CONNECTA_Pets/
+CONNECTA/
 ├── app/
 │   ├── __init__.py          # Application Factory
-│   ├── extensions.py        # Instancia MongoDB
-│   ├── routes/
-│   │   ├── webhook.py       # Recibe mensajes de Evolution API
-│   │   ├── citas.py         # Agendamiento de citas
-│   │   └── historial.py     # Historiales clínicos
-│   ├── models/
-│   │   ├── mascota.py
-│   │   └── cita.py
-│   └── services/
-│       ├── whatsapp.py      # Envío de mensajes vía Evolution API
-│       └── nlp.py           # Detección de intención y respuestas
-├── actividades/
-│   └── main.py              # Entregables académicos
-├── Docs/
-│   └── CONNECTA Pets.pdf    # Documento del proyecto
+│   ├── extensions.py        # MongoDB, SocketIO, Login, Bcrypt
+│   ├── models/              # MongoDB schemas (User, Pet, Appointment, etc.)
+│   ├── routes/              # Blueprints (auth, chat, dashboard, pets, appointments)
+│   │   └── api/             # REST API endpoints
+│   ├── services/
+│   │   ├── whatsapp.py      # Message sending via Evolution API
+│   │   └── nlp.py           # Intent detection & responses
+│   ├── templates/           # Jinja2 HTML templates
+│   ├── static/              # CSS & JS assets
+│   └── utils/               # Helpers & decorators
+├── actividades/             # Academic deliverables
 ├── config.py
 ├── run.py
 ├── requirements.txt
@@ -49,16 +47,16 @@ CONNECTA_Pets/
 └── .env.example
 ```
 
-## Instalación y ejecución
+## Setup
 
-### Con Docker (recomendado)
+### With Docker (recommended)
 
 ```bash
 cp .env.example .env
 docker-compose up --build
 ```
 
-### Sin Docker
+### Without Docker
 
 ```bash
 pip install -r requirements.txt
@@ -66,26 +64,25 @@ cp .env.example .env
 python run.py
 ```
 
-La app queda disponible en `http://localhost:5000`.
+App runs at `http://localhost:5000`. Default admin: `admin` / `admin`.
 
-## Variables de entorno
+## Environment Variables
 
-Copia `.env.example` a `.env` y completa los valores:
+Copy `.env.example` to `.env` and fill in:
 
-| Variable | Descripción |
+| Variable | Description |
 |---|---|
-| `SECRET_KEY` | Clave secreta de Flask |
-| `MONGO_URI` | URI de conexión a MongoDB |
-| `EVOLUTION_API_URL` | URL de tu instancia Evolution API |
-| `EVOLUTION_API_KEY` | API Key de Evolution API |
-| `EVOLUTION_INSTANCE` | Nombre de la instancia WhatsApp |
+| `SECRET_KEY` | Flask secret key |
+| `MONGO_URI` | MongoDB connection URI |
+| `EVOLUTION_API_URL` | Evolution API instance URL |
+| `EVOLUTION_API_KEY` | Evolution API key |
+| `EVOLUTION_INSTANCE` | WhatsApp instance name |
 
-## Endpoints disponibles
+## Features
 
-| Método | Endpoint | Descripción |
-|---|---|---|
-| POST | `/webhook/` | Recibe mensajes entrantes de WhatsApp |
-| GET | `/citas/` | Lista citas agendadas |
-| POST | `/citas/` | Agenda una nueva cita |
-| GET | `/historial/<mascota_id>` | Obtiene historial clínico |
-| POST | `/historial/<mascota_id>` | Agrega registro clínico |
+- **Real-time chat** — WhatsApp integration via webhook + Socket.IO live messaging
+- **Pet management** — CRUD for patient records
+- **Appointments** — Scheduling and tracking
+- **Dashboard** — Clinic activity overview
+- **Auth** — Login with role-based access
+- **Settings** — Configurable clinic parameters
