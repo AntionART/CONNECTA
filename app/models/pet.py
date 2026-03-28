@@ -21,21 +21,25 @@ from bson import ObjectId
 class Pet:
     COLLECTION = 'pets'
 
-    # Dynamic Input: Receives pet attributes from API request (name, species,
-    # breed, age_years, weight_kg, owner_phone, owner_name).
+    # [GUÍA 2 - ACTIVIDAD 1] Declaración de tipos de variables en parámetros
+    # Uso en CONNECTA: name y species son str (texto libre del usuario),
+    # age_years es float (puede ser 1.5 años), weight_kg es float (ej: 4.2 kg),
+    # owner_phone es str (número WhatsApp como '573001234567')
+    # Ejemplo: Pet.create('Luna', 'Perro', 'Labrador', 2.5, 18.3, '573001234567')
     @staticmethod
     def create(name, species, breed, age_years, weight_kg, owner_phone, owner_name=''):
-        # Business Rule: owner_phone links pet to WhatsApp conversations.
-        # This field must match a conversation's phone_number to associate
-        # the pet with its owner's chat thread.
+        # [GUÍA 2 - ACTIVIDAD 1] Variables con tipos explícitos en el documento MongoDB
+        # Uso en CONNECTA: age_years (float) y weight_kg (float) permiten decimales
+        # para representar '6 meses' como 0.5 o '4.2 kg' con precisión decimal
+        # Ejemplo: {'age_years': 2.5, 'weight_kg': 18.3, 'name': 'Luna', 'species': 'Perro'}
         doc = {
-            'name': name,
-            'species': species,
-            'breed': breed,
-            'age_years': age_years,
-            'weight_kg': weight_kg,
-            'owner_phone': owner_phone,
-            'owner_name': owner_name,
+            'name': name,            # str — nombre de la mascota
+            'species': species,      # str — especie (Perro, Gato, etc.)
+            'breed': breed,          # str — raza
+            'age_years': age_years,  # float — edad en años (ej: 0.5 = 6 meses)
+            'weight_kg': weight_kg,  # float — peso en kilogramos
+            'owner_phone': owner_phone,  # str — teléfono WhatsApp del dueño
+            'owner_name': owner_name,    # str — nombre del dueño
             'created_at': datetime.now(timezone.utc),
             'updated_at': datetime.now(timezone.utc),
         }
@@ -47,16 +51,14 @@ class Pet:
     def find_by_id(pet_id):
         return mongo.db[Pet.COLLECTION].find_one({'_id': ObjectId(pet_id)})
 
-    # List: Returns array of pets matching the phone number.
-    # Concept Validation: Phone number is the foreign key linking pets
-    # to conversations — all pets sharing an owner_phone belong to the
-    # same WhatsApp contact.
+    # [GUÍA 2 - ACTIVIDAD 3] Lista como resultado de consulta
+    # Uso en CONNECTA: list() convierte el cursor MongoDB en una lista Python;
+    # phone_number actúa como FK hacia conversations para vincular mascota con chat
+    # Ejemplo: find_by_owner_phone('573001234567') → [{'name': 'Luna', ...}, {'name': 'Max', ...}]
     @staticmethod
     def find_by_owner_phone(phone):
         return list(mongo.db[Pet.COLLECTION].find({'owner_phone': phone}))
 
-    # Professional Output: Returns all pets sorted by creation date descending
-    # (newest first), suitable for rendering in admin/dashboard views.
     @staticmethod
     def list_all():
         return list(mongo.db[Pet.COLLECTION].find().sort('created_at', -1))

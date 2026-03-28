@@ -6,15 +6,20 @@ from app.models.label import Label
 from app.utils.helpers import serialize_doc, serialize_docs
 
 
+# [GUÍA 4 - ACTIVIDAD 1] Captura de datos — query params de la request HTTP
+# Uso en CONNECTA: Los filtros del listado de conversaciones llegan como
+# parámetros de URL (?status=open&label=urgente); request.args.get() los captura
+# Ejemplo: GET /api/conversations?status=open → filters['status'] = 'open'
 @api_bp.route('/conversations', methods=['GET'])
 @login_required
 def list_conversations():
     """
     List all conversations with optional filtering.
-
-    Dynamic Input: Filters from query params (status, assigned_to, label).
-    List: Returns JSON array of conversation documents.
     """
+    # [GUÍA 5 - ACTIVIDAD 4] Diccionario — construcción de filtros desde query params
+    # Uso en CONNECTA: filters agrupa los 3 parámetros opcionales en un dict
+    # que se pasa al modelo; si un param no está en la URL su valor es None
+    # Ejemplo: filters = {'status': 'open', 'assigned_to': None, 'label': 'vip'}
     filters = {
         'status': request.args.get('status'),
         'assigned_to': request.args.get('assigned_to'),
@@ -39,16 +44,21 @@ def get_conversation(conversation_id):
 def update_conversation(conversation_id):
     """
     Partially update a conversation's metadata.
-
-    Nested Logic: Conditionally builds update dict based on provided fields.
-    Business Rule: Emits SocketIO event so all connected clients see the change in real-time.
     """
     conv = Conversation.find_by_id(conversation_id)
     if not conv:
         return jsonify({'error': 'Not found'}), 404
 
+    # [GUÍA 4 - ACTIVIDAD 1] Captura de datos — cuerpo JSON de la request PATCH
+    # Uso en CONNECTA: El frontend envía un JSON con solo los campos a actualizar
+    # (assigned_to, labels, status, contact_name); request.get_json() lo captura
+    # Ejemplo: data = {'status': 'closed'} → cierra la conversación
     data = request.get_json()
-    # Nested Logic: Conditionally builds update dict based on provided fields
+
+    # [GUÍA 3 - ACTIVIDAD 1] if/elif anidados — construcción selectiva del update
+    # Uso en CONNECTA: Solo los campos presentes en data se agregan al dict update;
+    # permite PATCH parcial sin sobrescribir campos no enviados
+    # Ejemplo: if 'status' in data → update['status'] = 'closed'
     update = {}
 
     if 'assigned_to' in data:
@@ -65,7 +75,6 @@ def update_conversation(conversation_id):
 
     updated = Conversation.find_by_id(conversation_id)
 
-    # Business Rule: Emits SocketIO event so all connected clients see the change in real-time
     from app.extensions import socketio
     from app.utils.helpers import serialize_doc as sd
     socketio.emit('conversation_updated', sd(updated))
@@ -85,20 +94,28 @@ def list_labels():
 def create_label():
     """
     Create a new label for conversation categorization.
-
-    Syntax & Variables: name is normalized (lowercase, underscores) from display_name.
-    Business Rule: Prevents duplicate labels (checks existing before insert).
     """
+    # [GUÍA 4 - ACTIVIDAD 1] Captura de datos — JSON body de la request POST
+    # Uso en CONNECTA: El usuario del dashboard envía {name, display_name, color}
+    # para crear una nueva etiqueta de conversación
+    # Ejemplo: data = {'name': 'VIP', 'display_name': 'Cliente VIP', 'color': '#FFD700'}
     data = request.get_json()
-    # Syntax & Variables: name is normalized (lowercase, underscores) from display_name
+
+    # [GUÍA 2 - ACTIVIDAD 2] String manipulation — .strip(), .lower(), .replace()
+    # Uso en CONNECTA: Normaliza el nombre de la etiqueta para almacenaje consistente;
+    # 'Urgente ', 'URGENTE', 'urgente' → todos se guardan como 'urgente'
+    # Ejemplo: '  VIP Cliente  '.strip().lower().replace(' ', '_') → 'vip_cliente'
     name = data.get('name', '').strip().lower().replace(' ', '_')
     display_name = data.get('display_name', '').strip()
     color = data.get('color', '#6B7280')
 
+    # [GUÍA 3 - ACTIVIDAD 2] Operador lógico — not...or para validación doble
+    # Uso en CONNECTA: Ambos campos son obligatorios; si cualquiera está vacío
+    # después de normalizar, retorna 400 antes de tocar la base de datos
+    # Ejemplo: if not name or not display_name → return error 400
     if not name or not display_name:
         return jsonify({'error': 'name and display_name are required'}), 400
 
-    # Business Rule: Prevents duplicate labels (checks existing before insert)
     existing = Label.find_by_name(name)
     if existing:
         return jsonify({'error': 'Label already exists'}), 409

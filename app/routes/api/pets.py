@@ -17,8 +17,6 @@ def list_pets():
 def list_pets_by_phone(phone):
     """
     List pets belonging to a specific phone number.
-
-    Concept Validation: Phone number links WhatsApp contact to their pets.
     """
     pets = Pet.find_by_owner_phone(phone)
     return jsonify(serialize_docs(pets))
@@ -38,18 +36,31 @@ def get_pet(pet_id):
 def create_pet():
     """
     Create a new pet record.
-
-    List: required list defines mandatory fields, iterated for validation.
-    Dynamic Input: All fields come from JSON request body.
     """
+    # [GUÍA 4 - ACTIVIDAD 1] Captura de datos — JSON body con datos de la mascota
+    # Uso en CONNECTA: El formulario del dashboard envía name, species, breed,
+    # age_years, weight_kg, owner_phone; request.get_json() los captura
+    # Ejemplo: data = {'name': 'Luna', 'species': 'Perro', 'owner_phone': '573001234567'}
     data = request.get_json()
-    # List: required list defines mandatory fields, iterated for validation
+
+    # [GUÍA 6 - ACTIVIDAD 1] Vector — lista 1D de campos obligatorios
+    # Uso en CONNECTA: required define los 3 campos mínimos sin los cuales
+    # no se puede crear una mascota; se itera para validar cada uno
+    # Ejemplo: required = ['name', 'species', 'owner_phone']
     required = ['name', 'species', 'owner_phone']
+
+    # [GUÍA 5 - ACTIVIDAD 1] Ciclo for — validación de campos requeridos
+    # Uso en CONNECTA: Itera el vector required; si cualquier campo falta en data
+    # retorna 400 con el nombre del campo faltante en el mensaje de error
+    # Ejemplo: for field in required → if not data.get('name') → return 400 'name is required'
     for field in required:
         if not data.get(field):
+            # [GUÍA 4 - ACTIVIDAD 3] F-string en mensaje de error dinámico
+            # Uso en CONNECTA: El nombre del campo faltante se embebe en el error
+            # para que el frontend pueda mostrar exactamente qué hace falta
+            # Ejemplo: f'{field} is required' → 'species is required'
             return jsonify({'error': f'{field} is required'}), 400
 
-    # Dynamic Input: All fields come from JSON request body
     pet = Pet.create(
         name=data['name'],
         species=data['species'],
@@ -67,8 +78,6 @@ def create_pet():
 def update_pet(pet_id):
     """
     Update an existing pet record.
-
-    List: Iterates over allowed field names to build update dict.
     """
     pet = Pet.find_by_id(pet_id)
     if not pet:
@@ -76,7 +85,16 @@ def update_pet(pet_id):
 
     data = request.get_json()
     update = {}
-    # List: Iterates over allowed field names to build update dict
+
+    # [GUÍA 6 - ACTIVIDAD 1] Vector — lista 1D de campos actualizables
+    # Uso en CONNECTA: allowed_fields define exactamente qué campos del modelo
+    # Pet puede actualizar el usuario; evita que envíen campos no autorizados
+    # Ejemplo: ['name', 'species', 'breed', 'age_years', 'weight_kg', 'owner_phone', 'owner_name']
+
+    # [GUÍA 5 - ACTIVIDAD 1] Ciclo for — construcción selectiva del dict de update
+    # Uso en CONNECTA: Solo los campos que el cliente envió Y que están en la lista
+    # se incluyen en el update; protege campos internos como created_at
+    # Ejemplo: data={'name':'Max', 'age_years':3} → update={'name':'Max', 'age_years':3}
     for field in ['name', 'species', 'breed', 'age_years', 'weight_kg', 'owner_phone', 'owner_name']:
         if field in data:
             update[field] = data[field]

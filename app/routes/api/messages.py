@@ -13,22 +13,25 @@ from app.utils.helpers import serialize_doc, serialize_docs
 def list_messages(conversation_id):
     """
     List messages for a conversation with pagination.
-
-    Arithmetic Logic: Pagination with page and per_page parameters.
-    Professional Output: Returns paginated response with messages, total, page, per_page.
     """
     conv = Conversation.find_by_id(conversation_id)
     if not conv:
         return jsonify({'error': 'Not found'}), 404
 
-    # Arithmetic Logic: Pagination with page and per_page parameters
+    # [GUÍA 4 - ACTIVIDAD 2] Casting de tipos — type=int en args.get()
+    # Uso en CONNECTA: Los query params de URL son siempre strings; type=int
+    # convierte '2' → 2 automáticamente para usar en cálculos de paginación
+    # Ejemplo: ?page=2&per_page=50 → page=int('2')=2, per_page=int('50')=50
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
 
     messages = Message.find_by_conversation(conversation_id, page, per_page)
     total = Message.count_by_conversation(conversation_id)
 
-    # Professional Output: Returns paginated response with messages, total, page, per_page
+    # [GUÍA 2 - ACTIVIDAD 4] Operadores aritméticos — implícitos en paginación MongoDB
+    # Uso en CONNECTA: La paginación usa skip=(page-1)*per_page internamente;
+    # page y per_page son int para hacer esa multiplicación correctamente
+    # Ejemplo: page=2, per_page=50 → skip=50, limit=50 → mensajes 51-100
     return jsonify({
         'messages': serialize_docs(messages),
         'total': total,
@@ -42,24 +45,30 @@ def list_messages(conversation_id):
 def send_message(conversation_id):
     """
     Send a message to a WhatsApp contact from the dashboard.
-
-    Business Rule: Sends via WhatsApp first, then saves to DB.
-    Nested Structure: wa_response may contain nested key.id for message tracking.
-    MVP Integration: Core feature — agents can reply to WhatsApp from the dashboard.
     """
     conv = Conversation.find_by_id(conversation_id)
     if not conv:
         return jsonify({'error': 'Not found'}), 404
 
+    # [GUÍA 4 - ACTIVIDAD 1] Captura de datos — JSON body con texto del mensaje
+    # Uso en CONNECTA: El agente escribe el mensaje en el chat del dashboard;
+    # .get('text', '').strip() captura y limpia el texto antes de enviarlo
+    # Ejemplo: data = {'text': 'Hola, su cita es mañana a las 10am'}
     data = request.get_json()
     text = data.get('text', '').strip()
+
+    # [GUÍA 3 - ACTIVIDAD 3] Validación — texto vacío no se envía a WhatsApp
+    # Uso en CONNECTA: Evita enviar mensajes vacíos al contacto vía Evolution API
+    # Ejemplo: if not text → return 400 antes de llamar WhatsAppService.send_text()
     if not text:
         return jsonify({'error': 'text is required'}), 400
 
-    # Business Rule: Sends via WhatsApp first, then saves to DB
     wa_response = WhatsAppService.send_text(conv['phone_number'], text)
 
-    # Nested Structure: wa_response may contain nested key.id for message tracking
+    # [GUÍA 3 - ACTIVIDAD 2] Operadores lógicos — isinstance + and para acceso seguro
+    # Uso en CONNECTA: wa_response puede ser dict o None según la respuesta de Evolution;
+    # solo accede a 'key' si efectivamente es un dict y tiene esa clave
+    # Ejemplo: if isinstance(wa_response, dict) and 'key' in wa_response → extrae ID
     wa_message_id = None
     if isinstance(wa_response, dict) and 'key' in wa_response:
         wa_message_id = wa_response['key'].get('id')
