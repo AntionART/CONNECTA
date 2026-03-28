@@ -1,11 +1,10 @@
 from flask import request, jsonify
-from flask_login import login_required, current_user
+from flask_login import login_required
 from app.routes.api import api_bp
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.services.whatsapp import WhatsAppService
-from app.extensions import socketio
-from app.utils.helpers import serialize_doc, serialize_docs
+from app.utils.helpers import serialize_doc, serialize_docs, get_or_404, save_message_and_notify
 
 
 @api_bp.route('/conversations/<conversation_id>/messages', methods=['GET'])
@@ -14,9 +13,9 @@ def list_messages(conversation_id):
     """
     List messages for a conversation with pagination.
     """
-    conv = Conversation.find_by_id(conversation_id)
-    if not conv:
-        return jsonify({'error': 'Not found'}), 404
+    conv, err = get_or_404(Conversation, conversation_id)
+    if err:
+        return err
 
     # [GUÍA 4 - ACTIVIDAD 2] Casting de tipos — type=int en args.get()
     # Uso en CONNECTA: Los query params de URL son siempre strings; type=int
@@ -46,9 +45,9 @@ def send_message(conversation_id):
     """
     Send a message to a WhatsApp contact from the dashboard.
     """
-    conv = Conversation.find_by_id(conversation_id)
-    if not conv:
-        return jsonify({'error': 'Not found'}), 404
+    conv, err = get_or_404(Conversation, conversation_id)
+    if err:
+        return err
 
     # [GUÍA 4 - ACTIVIDAD 1] Captura de datos — JSON body con texto del mensaje
     # Uso en CONNECTA: El agente escribe el mensaje en el chat del dashboard;
@@ -73,26 +72,7 @@ def send_message(conversation_id):
     if isinstance(wa_response, dict) and 'key' in wa_response:
         wa_message_id = wa_response['key'].get('id')
 
-    # Save message to DB
     content = {'type': 'text', 'text': text, 'media_url': None}
-    msg = Message.create(
-        conversation_id=conversation_id,
-        direction='outbound',
-        sender_type='agent',
-        content=content,
-        wa_message_id=wa_message_id,
-    )
-
-    # Update conversation
-    Conversation.update_last_message(conversation_id, text, is_from_contact=False)
-
-    # Emit socket event
-    socketio.emit('new_message', {
-        'conversation_id': conversation_id,
-        'message': serialize_doc(msg),
-    })
-
-    updated_conv = Conversation.find_by_id(conversation_id)
-    socketio.emit('conversation_updated', serialize_doc(updated_conv))
+    msg = save_message_and_notify(conversation_id, 'outbound', 'agent', content, wa_message_id)
 
     return jsonify(serialize_doc(msg)), 201

@@ -14,11 +14,12 @@ may contain any locale content from WhatsApp users.
 """
 
 from app.extensions import mongo
+from app.models.base import BaseModel
 from datetime import datetime, timezone
 from bson import ObjectId
 
 
-class Conversation:
+class Conversation(BaseModel):
     COLLECTION = 'conversations'
 
     @staticmethod
@@ -53,12 +54,6 @@ class Conversation:
         result = mongo.db[Conversation.COLLECTION].insert_one(doc)
         doc['_id'] = result.inserted_id
         return doc
-
-    @staticmethod
-    def find_by_id(conversation_id):
-        return mongo.db[Conversation.COLLECTION].find_one(
-            {'_id': ObjectId(conversation_id)}
-        )
 
     @staticmethod
     def find_by_phone(phone_number):

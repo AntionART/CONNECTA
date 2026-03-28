@@ -2,7 +2,7 @@ from flask import request, jsonify
 from flask_login import login_required
 from app.routes.api import api_bp
 from app.models.pet import Pet
-from app.utils.helpers import serialize_doc, serialize_docs
+from app.utils.helpers import serialize_doc, serialize_docs, get_or_404
 
 
 @api_bp.route('/pets', methods=['GET'])
@@ -25,9 +25,9 @@ def list_pets_by_phone(phone):
 @api_bp.route('/pets/<pet_id>', methods=['GET'])
 @login_required
 def get_pet(pet_id):
-    pet = Pet.find_by_id(pet_id)
-    if not pet:
-        return jsonify({'error': 'Not found'}), 404
+    pet, err = get_or_404(Pet, pet_id)
+    if err:
+        return err
     return jsonify(serialize_doc(pet))
 
 
@@ -79,9 +79,9 @@ def update_pet(pet_id):
     """
     Update an existing pet record.
     """
-    pet = Pet.find_by_id(pet_id)
-    if not pet:
-        return jsonify({'error': 'Not found'}), 404
+    pet, err = get_or_404(Pet, pet_id)
+    if err:
+        return err
 
     data = request.get_json()
     update = {}
@@ -108,8 +108,8 @@ def update_pet(pet_id):
 @api_bp.route('/pets/<pet_id>', methods=['DELETE'])
 @login_required
 def delete_pet(pet_id):
-    pet = Pet.find_by_id(pet_id)
-    if not pet:
-        return jsonify({'error': 'Not found'}), 404
+    pet, err = get_or_404(Pet, pet_id)
+    if err:
+        return err
     Pet.delete(pet_id)
     return jsonify({'status': 'deleted'}), 200

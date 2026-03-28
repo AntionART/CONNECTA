@@ -14,11 +14,12 @@ any language as entered by the user.
 """
 
 from app.extensions import mongo
+from app.models.base import BaseModel
 from datetime import datetime, timezone
 from bson import ObjectId
 
 
-class Pet:
+class Pet(BaseModel):
     COLLECTION = 'pets'
 
     # [GUÍA 2 - ACTIVIDAD 1] Declaración de tipos de variables en parámetros
@@ -47,10 +48,6 @@ class Pet:
         doc['_id'] = result.inserted_id
         return doc
 
-    @staticmethod
-    def find_by_id(pet_id):
-        return mongo.db[Pet.COLLECTION].find_one({'_id': ObjectId(pet_id)})
-
     # [GUÍA 2 - ACTIVIDAD 3] Lista como resultado de consulta
     # Uso en CONNECTA: list() convierte el cursor MongoDB en una lista Python;
     # phone_number actúa como FK hacia conversations para vincular mascota con chat
@@ -63,17 +60,6 @@ class Pet:
     def list_all():
         return list(mongo.db[Pet.COLLECTION].find().sort('created_at', -1))
 
-    @staticmethod
-    def update(pet_id, data):
-        data['updated_at'] = datetime.now(timezone.utc)
-        mongo.db[Pet.COLLECTION].update_one(
-            {'_id': ObjectId(pet_id)},
-            {'$set': data},
-        )
-
-    @staticmethod
-    def delete(pet_id):
-        mongo.db[Pet.COLLECTION].delete_one({'_id': ObjectId(pet_id)})
 
 
 def init_pet_indexes():

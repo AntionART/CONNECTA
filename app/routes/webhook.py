@@ -4,9 +4,7 @@ This is the entry point for all WhatsApp inbound messages.
 """
 from flask import Blueprint, request, jsonify, current_app
 from app.models.conversation import Conversation
-from app.models.message import Message
-from app.extensions import socketio
-from app.utils.helpers import serialize_doc
+from app.utils.helpers import save_message_and_notify
 
 webhook_bp = Blueprint('webhook', __name__)
 
@@ -120,25 +118,8 @@ def _handle_message_upsert(data):
         if contact_name and not conv.get('contact_name'):
             Conversation.update(conv_id, {'contact_name': contact_name})
 
-        # Create message record
-        msg = Message.create(
-            conversation_id=conv_id,
-            direction='inbound',
-            sender_type='contact',
-            content=content,
-            wa_message_id=wa_message_id,
-        )
-
-        # Update conversation last message
-        Conversation.update_last_message(conv_id, text, is_from_contact=True)
-
-        # Emit socket events for real-time updates
-        updated_conv = Conversation.find_by_id(conv_id)
-        socketio.emit('new_message', {
-            'conversation_id': conv_id,
-            'message': serialize_doc(msg),
-        })
-        socketio.emit('conversation_updated', serialize_doc(updated_conv))
+        # Persiste el mensaje y notifica al frontend en tiempo real
+        save_message_and_notify(conv_id, 'inbound', 'contact', content, wa_message_id)
 
     # [GUÍA 4 - ACTIVIDAD 3] F-string en manejo de errores
     # Uso en CONNECTA: f'Webhook error: {e}' formatea el mensaje de log

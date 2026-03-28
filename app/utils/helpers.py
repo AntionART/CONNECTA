@@ -1,8 +1,9 @@
 """
-Helper utilities for MongoDB document serialization.
+Helper utilities for MongoDB document serialization and common API patterns.
 """
 from bson import ObjectId
 from datetime import datetime, timezone
+from flask import jsonify
 
 
 # [GUÍA 6 - ACTIVIDAD 3] Ciclo anidado — iteración sobre dict + iteración sobre lista
@@ -75,3 +76,50 @@ def serialize_docs(docs):
     # de dicts serializables a JSON con una sola línea
     # Ejemplo: [serialize_doc(doc) for doc in pets_cursor] → lista JSON-ready
     return [serialize_doc(doc) for doc in docs]
+
+
+def save_message_and_notify(conversation_id, direction, sender_type,
+                            content, wa_message_id=None):
+    """
+    Persiste un mensaje en DB, actualiza la conversación y emite eventos Socket.IO.
+    Centraliza la lógica compartida entre webhook (inbound) y API messages (outbound).
+
+    direction:   'inbound' | 'outbound'
+    sender_type: 'contact' | 'agent'
+    content:     dict {'type': str, 'text': str, 'media_url': str|None}
+    """
+    from app.models.message import Message
+    from app.models.conversation import Conversation
+    from app.extensions import socketio
+
+    is_from_contact = direction == 'inbound'
+
+    msg = Message.create(
+        conversation_id=conversation_id,
+        direction=direction,
+        sender_type=sender_type,
+        content=content,
+        wa_message_id=wa_message_id,
+    )
+    Conversation.update_last_message(conversation_id, content.get('text', ''), is_from_contact)
+
+    updated_conv = Conversation.find_by_id(conversation_id)
+    socketio.emit('new_message', {
+        'conversation_id': conversation_id,
+        'message': serialize_doc(msg),
+    })
+    socketio.emit('conversation_updated', serialize_doc(updated_conv))
+
+    return msg
+
+
+def get_or_404(model, doc_id):
+    """
+    Busca un documento por ID y aborta con 404 si no existe.
+    Retorna (doc, None) si existe, o (None, response_404) si no.
+    Uso: doc, err = get_or_404(Pet, pet_id); if err: return err
+    """
+    doc = model.find_by_id(doc_id)
+    if not doc:
+        return None, (jsonify({'error': 'Not found'}), 404)
+    return doc, None

@@ -3,8 +3,16 @@ from flask_login import login_required
 from app.routes.api import api_bp
 from app.models.appointment import Appointment
 from app.models.pet import Pet
-from app.utils.helpers import serialize_doc, serialize_docs
+from app.utils.helpers import serialize_doc, serialize_docs, get_or_404
 from datetime import datetime
+
+
+def _enrich_appointment(apt):
+    """Serializa una cita y embebe los datos de su mascota."""
+    apt_dict = serialize_doc(apt)
+    pet = Pet.find_by_id(str(apt['pet_id']))
+    apt_dict['pet'] = serialize_doc(pet) if pet else None
+    return apt_dict
 
 
 @api_bp.route('/appointments', methods=['GET'])
@@ -17,21 +25,8 @@ def list_appointments():
     appointments = Appointment.list_all(status)
 
     # [GUÍA 5 - ACTIVIDAD 5] Lista de diccionarios — citas enriquecidas con datos de mascota
-    # Uso en CONNECTA: result es una lista donde cada elemento es un dict de cita
-    # al que se le añade la clave 'pet' con los datos de la mascota embebidos
-    # Ejemplo: [{'_id': '...', 'reason': 'Vacuna', 'pet': {'name': 'Luna', 'species': 'Perro'}}]
-    result = []
-
-    # [GUÍA 6 - ACTIVIDAD 3] Ciclo anidado — for sobre citas + find_one por mascota
-    # Uso en CONNECTA: El ciclo externo recorre cada cita; internamente hace una
-    # consulta a pets por cada cita (ciclo DB implícito) para enriquecer la respuesta
-    # Ejemplo: for apt in appointments → pet = Pet.find_by_id(apt['pet_id']) → apt_dict['pet']=pet
-    for apt in appointments:
-        apt_dict = serialize_doc(apt)
-        pet = Pet.find_by_id(str(apt['pet_id']))
-        apt_dict['pet'] = serialize_doc(pet) if pet else None
-        result.append(apt_dict)
-    return jsonify(result)
+    # [GUÍA 6 - ACTIVIDAD 3] Ciclo anidado — for + consulta DB por mascota en _enrich_appointment
+    return jsonify([_enrich_appointment(apt) for apt in appointments])
 
 
 @api_bp.route('/appointments/by-pet/<pet_id>', methods=['GET'])
@@ -41,31 +36,16 @@ def list_appointments_by_pet(pet_id):
     List appointment history for a specific pet.
     """
     appointments = Appointment.find_by_pet(pet_id)
-    result = []
-
-    # [GUÍA 5 - ACTIVIDAD 1] Ciclo for — construcción de respuesta enriquecida
-    # Uso en CONNECTA: Para el historial clínico de una mascota, cada cita
-    # incluye sus propios datos de mascota para que el frontend no necesite
-    # hacer una segunda llamada
-    # Ejemplo: for apt in appointments → serializa y agrega datos de mascota
-    for apt in appointments:
-        apt_dict = serialize_doc(apt)
-        pet = Pet.find_by_id(str(apt['pet_id']))
-        apt_dict['pet'] = serialize_doc(pet) if pet else None
-        result.append(apt_dict)
-    return jsonify(result)
+    return jsonify([_enrich_appointment(apt) for apt in appointments])
 
 
 @api_bp.route('/appointments/<appointment_id>', methods=['GET'])
 @login_required
 def get_appointment(appointment_id):
-    apt = Appointment.find_by_id(appointment_id)
-    if not apt:
-        return jsonify({'error': 'Not found'}), 404
-    apt_dict = serialize_doc(apt)
-    pet = Pet.find_by_id(str(apt['pet_id']))
-    apt_dict['pet'] = serialize_doc(pet) if pet else None
-    return jsonify(apt_dict)
+    apt, err = get_or_404(Appointment, appointment_id)
+    if err:
+        return err
+    return jsonify(_enrich_appointment(apt))
 
 
 @api_bp.route('/appointments', methods=['POST'])
@@ -119,9 +99,9 @@ def create_appointment():
 @api_bp.route('/appointments/<appointment_id>', methods=['PUT'])
 @login_required
 def update_appointment(appointment_id):
-    apt = Appointment.find_by_id(appointment_id)
-    if not apt:
-        return jsonify({'error': 'Not found'}), 404
+    apt, err = get_or_404(Appointment, appointment_id)
+    if err:
+        return err
 
     data = request.get_json()
     update = {}
@@ -153,8 +133,8 @@ def update_appointment(appointment_id):
 @api_bp.route('/appointments/<appointment_id>', methods=['DELETE'])
 @login_required
 def delete_appointment(appointment_id):
-    apt = Appointment.find_by_id(appointment_id)
-    if not apt:
-        return jsonify({'error': 'Not found'}), 404
+    apt, err = get_or_404(Appointment, appointment_id)
+    if err:
+        return err
     Appointment.delete(appointment_id)
     return jsonify({'status': 'deleted'}), 200

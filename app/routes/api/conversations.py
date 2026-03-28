@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.routes.api import api_bp
 from app.models.conversation import Conversation
 from app.models.label import Label
-from app.utils.helpers import serialize_doc, serialize_docs
+from app.utils.helpers import serialize_doc, serialize_docs, get_or_404
 
 
 # [GUÍA 4 - ACTIVIDAD 1] Captura de datos — query params de la request HTTP
@@ -32,9 +32,9 @@ def list_conversations():
 @api_bp.route('/conversations/<conversation_id>', methods=['GET'])
 @login_required
 def get_conversation(conversation_id):
-    conv = Conversation.find_by_id(conversation_id)
-    if not conv:
-        return jsonify({'error': 'Not found'}), 404
+    conv, err = get_or_404(Conversation, conversation_id)
+    if err:
+        return err
     Conversation.reset_unread(conversation_id)
     return jsonify(serialize_doc(conv))
 
@@ -45,9 +45,9 @@ def update_conversation(conversation_id):
     """
     Partially update a conversation's metadata.
     """
-    conv = Conversation.find_by_id(conversation_id)
-    if not conv:
-        return jsonify({'error': 'Not found'}), 404
+    conv, err = get_or_404(Conversation, conversation_id)
+    if err:
+        return err
 
     # [GUÍA 4 - ACTIVIDAD 1] Captura de datos — cuerpo JSON de la request PATCH
     # Uso en CONNECTA: El frontend envía un JSON con solo los campos a actualizar
@@ -127,9 +127,9 @@ def create_label():
 @api_bp.route('/labels/<label_id>', methods=['DELETE'])
 @login_required
 def delete_label(label_id):
-    label = Label.find_by_id(label_id)
-    if not label:
-        return jsonify({'error': 'Not found'}), 404
+    label, err = get_or_404(Label, label_id)
+    if err:
+        return err
     Label.delete(label_id)
     return jsonify({'status': 'deleted'})
 

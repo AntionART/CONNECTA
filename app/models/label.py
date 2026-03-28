@@ -11,10 +11,11 @@ categorization (e.g., 'urgent', 'follow-up', 'vip').
 """
 
 from app.extensions import mongo
+from app.models.base import BaseModel
 from bson import ObjectId
 
 
-class Label:
+class Label(BaseModel):
     COLLECTION = 'labels'
 
     # Data Structure: Simple document with name, display_name, color.
@@ -33,10 +34,6 @@ class Label:
         return doc
 
     @staticmethod
-    def find_by_id(label_id):
-        return mongo.db[Label.COLLECTION].find_one({'_id': ObjectId(label_id)})
-
-    @staticmethod
     def find_by_name(name):
         return mongo.db[Label.COLLECTION].find_one({'name': name})
 
@@ -44,9 +41,6 @@ class Label:
     def list_all():
         return list(mongo.db[Label.COLLECTION].find().sort('display_name', 1))
 
-    @staticmethod
-    def delete(label_id):
-        mongo.db[Label.COLLECTION].delete_one({'_id': ObjectId(label_id)})
 
 
 # Business Rule: Label names must be unique.

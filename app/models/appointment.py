@@ -10,11 +10,12 @@ with pets and, transitively, with their owners' WhatsApp conversations.
 """
 
 from app.extensions import mongo
+from app.models.base import BaseModel
 from datetime import datetime, timezone
 from bson import ObjectId
 
 
-class Appointment:
+class Appointment(BaseModel):
     COLLECTION = 'appointments'
 
     # [GUÍA 6 - ACTIVIDAD 1] Vector (lista 1D) de estados válidos
@@ -41,12 +42,6 @@ class Appointment:
         result = mongo.db[Appointment.COLLECTION].insert_one(doc)
         doc['_id'] = result.inserted_id
         return doc
-
-    @staticmethod
-    def find_by_id(appointment_id):
-        return mongo.db[Appointment.COLLECTION].find_one(
-            {'_id': ObjectId(appointment_id)}
-        )
 
     # [GUÍA 2 - ACTIVIDAD 3] Lista como resultado de consulta por mascota
     # Uso en CONNECTA: Retorna el historial de citas de una mascota como lista Python,
@@ -95,19 +90,6 @@ class Appointment:
             }).sort('date', 1)
         )
 
-    @staticmethod
-    def update(appointment_id, data):
-        data['updated_at'] = datetime.now(timezone.utc)
-        mongo.db[Appointment.COLLECTION].update_one(
-            {'_id': ObjectId(appointment_id)},
-            {'$set': data},
-        )
-
-    @staticmethod
-    def delete(appointment_id):
-        mongo.db[Appointment.COLLECTION].delete_one(
-            {'_id': ObjectId(appointment_id)}
-        )
 
 
 def init_appointment_indexes():
