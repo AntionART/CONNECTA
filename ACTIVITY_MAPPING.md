@@ -14,11 +14,28 @@ línea donde se implementa cada concepto.
 
 ---
 
-### GUÍA 1 — No en alcance de esta rastreabilidad
+## **GUÍA 1: Investigación Técnica y Constitución del Proyecto** ✅
+**Estado:** Completado en fase previa
+**Sesión:** 13/02/2026
 
-| Actividad | Ubicación | Estado |
-|---|---|---|
-| (No especificada en las instrucciones) | — | ⏳ |
+**Evidencia de Completitud:**
+- `CONNECTA_Pets.pdf` - Documento oficial del proyecto (Investigación técnica + justificación)
+- `README.md` - Descripción inicial del proyecto
+- `https://github.com/AntionART/CONNECTA` - Repositorio Git activo
+
+**Criterios Verificados:**
+| Requisito | Cumplido |
+|-----------|----------|
+| Título oficial del proyecto | ✅ CONNECTA: Sistema Inteligente de Gestión Veterinaria |
+| Definición del problema | ✅ Canales de comunicación fragmentados en clínicas veterinarias |
+| Investigación paradigma funcional | ✅ Sección 6 de CONNECTA_Pets.pdf |
+| Justificación Python + Evolution API | ✅ Sección 6 de CONNECTA_Pets.pdf |
+| Repositorio con README | ✅ GitHub con descripción inicial |
+
+**Notas:**
+- Guía 1 establece el escenario general: CONNECTA es un sistema veterinario integrado con WhatsApp
+- Las Guías 2-6 son desarrollo incremental de este proyecto base
+- Rastreabilidad de Guías 2-6 disponible en secciones siguientes
 
 ---
 
@@ -325,7 +342,7 @@ grep -rn "\[GUÍA" app/
 
 | Guía | Código | Documentación | Entrega |
 |---|---|---|---|
-| Guía 1 | ⏳ | ⏳ | ⏳ |
+| Guía 1 — Investigación Técnica | ✅ | ✅ | ✅ |
 | Guía 2 — Sintaxis & Colecciones | ✅ | ✅ | ✅ |
 | Guía 3 — Control Lógico | ✅ | ✅ | ✅ |
 | Guía 4 — Input/Output | ✅ | ✅ | ✅ |
