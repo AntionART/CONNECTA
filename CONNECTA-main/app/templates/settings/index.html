@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+{% block title %}Configuracion - CONNECTA{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="max-w-2xl mx-auto px-6 py-8">
+        <div class="mb-8">
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Configuracion</h1>
+            <p class="text-sm text-slate-500 mt-1">Administra tu conexion con WhatsApp</p>
+        </div>
+
+        <!-- API Configuration -->
+        <div class="section-card mb-5">
+            <div class="section-card-header">
+                <h2>Evolution API</h2>
+            </div>
+            <div class="section-card-body">
+                <form id="settings-form" class="space-y-4">
+                    <div>
+                        <label class="form-label">API URL</label>
+                        <input type="url" id="api-url" value="{{ config.api_url }}" placeholder="http://localhost:8080" class="input">
+                    </div>
+                    <div>
+                        <label class="form-label">API Key</label>
+                        <input type="password" id="api-key" value="{{ config.api_key }}" placeholder="tu-api-key" class="input">
+                    </div>
+                    <div>
+                        <label class="form-label">Instance Name</label>
+                        <input type="text" id="instance-name" value="{{ config.instance_name }}" placeholder="connecta-instance" class="input">
+                    </div>
+                    <div class="flex items-center gap-3 pt-1">
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="button" onclick="testConnection()" class="btn btn-secondary">Probar conexion</button>
+                        <span id="settings-status" class="text-sm"></span>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- WhatsApp Connection -->
+        <div class="section-card mb-5">
+            <div class="section-card-header">
+                <h2>Conexion WhatsApp</h2>
+                <div class="flex items-center gap-2">
+                    <span id="connection-dot" class="status-dot idle"></span>
+                    <span id="connection-label" class="text-xs font-medium text-slate-400">Verificando...</span>
+                </div>
+            </div>
+            <div class="section-card-body">
+                <!-- State: Unconfigured -->
+                <div id="state-unconfigured" class="hidden">
+                    <p class="text-sm text-slate-500">Primero configura y guarda los datos de la API arriba.</p>
+                </div>
+
+                <!-- State: Not found -->
+                <div id="state-not-found" class="hidden">
+                    <p class="text-sm text-slate-500 mb-4">La instancia no existe. Necesitas crearla para poder conectar WhatsApp.</p>
+                    <button onclick="createInstance()" id="btn-create" class="btn btn-primary">Crear instancia</button>
+                </div>
+
+                <!-- State: Disconnected -->
+                <div id="state-disconnected" class="hidden">
+                    <p class="text-sm text-slate-500 mb-4">La instancia existe pero no esta conectada. Escanea el codigo QR para vincular WhatsApp.</p>
+                    <div class="flex gap-3 mb-4">
+                        <button onclick="getQrCode()" id="btn-get-qr" class="btn btn-primary">Obtener codigo QR</button>
+                        <button onclick="deleteInstance()" id="btn-delete" class="btn btn-danger-outline">Eliminar instancia</button>
+                    </div>
+                </div>
+
+                <!-- State: Connected -->
+                <div id="state-connected" class="hidden">
+                    <div class="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-100 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-emerald-800">WhatsApp conectado</p>
+                            <p class="text-xs text-emerald-600">La instancia esta vinculada y recibiendo mensajes.</p>
+                        </div>
+                    </div>
+                    <button onclick="disconnectWhatsApp()" id="btn-disconnect" class="btn btn-danger-outline">Desconectar WhatsApp</button>
+                </div>
+
+                <!-- State: Connecting -->
+                <div id="state-connecting" class="hidden">
+                    <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                        Conectando... esperando escaneo del QR.
+                    </div>
+                </div>
+
+                <!-- QR Code -->
+                <div id="qr-container" class="hidden mt-4">
+                    <div class="rounded-xl p-6 bg-slate-50 border border-slate-200 text-center">
+                        <p class="text-sm text-slate-600 mb-4 font-medium">Escanea este codigo con WhatsApp en tu celular:</p>
+                        <img id="qr-image" src="" alt="QR Code" class="mx-auto max-w-[260px] rounded-xl shadow-lg">
+                        <p class="text-xs text-slate-400 mt-3">Se actualiza automaticamente cada 30 segundos</p>
+                    </div>
+                </div>
+
+                <p id="wa-status" class="text-sm mt-3"></p>
+            </div>
+        </div>
+
+        <!-- Labels -->
+        <div class="section-card mb-5">
+            <div class="section-card-header">
+                <h2>Etiquetas</h2>
+            </div>
+            <div class="section-card-body">
+                <form id="label-form" class="flex items-end gap-3 mb-5">
+                    <div class="flex-1">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" id="label-display-name" placeholder="Ej: Urgente" required class="input">
+                    </div>
+                    <div class="w-20">
+                        <label class="form-label">Color</label>
+                        <input type="color" id="label-color" value="#DC2626" class="input p-1 h-[38px] cursor-pointer">
+                    </div>
+                    <button type="submit" class="btn btn-primary whitespace-nowrap">Crear</button>
+                </form>
+                <div id="labels-list" class="flex flex-wrap gap-2">
+                    <p class="text-sm text-slate-400">Cargando...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Webhook -->
+        <div class="section-card">
+            <div class="section-card-header">
+                <h2>Webhook</h2>
+            </div>
+            <div class="section-card-body space-y-4">
+                <p class="text-sm text-slate-500">Configura la URL donde Evolution API enviara los mensajes entrantes a CONNECTA.</p>
+                <div>
+                    <label class="form-label">Webhook URL</label>
+                    <input type="url" id="webhook-url" placeholder="https://tu-dominio.com/webhook/" class="input">
+                    <p class="text-xs text-slate-400 mt-1.5">Ejemplo: https://tu-dominio.com/webhook/</p>
+                </div>
+
+                <div id="webhook-current" class="hidden p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Webhook actual</p>
+                    <p id="webhook-current-url" class="text-sm text-slate-800 font-mono"></p>
+                    <p id="webhook-current-status" class="text-xs mt-1"></p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="saveWebhook()" id="btn-save-webhook" class="btn btn-primary">Guardar webhook</button>
+                    <span id="webhook-status" class="text-sm"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let qrRefreshInterval = null;
+let stateCheckInterval = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkConnectionState();
+    loadCurrentWebhook();
+    loadLabels();
+    setupLabelForm();
+    stateCheckInterval = setInterval(checkConnectionState, 5000);
+});
+
+// --- API Config ---
+
+document.getElementById('settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = document.getElementById('settings-status');
+    status.textContent = 'Guardando...';
+    status.className = 'text-sm text-slate-500';
+
+    const res = await fetch('/settings/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            api_url: document.getElementById('api-url').value,
+            api_key: document.getElementById('api-key').value,
+            instance_name: document.getElementById('instance-name').value,
+        }),
+    });
+
+    if (res.ok) {
+        status.textContent = 'Guardado correctamente';
+        status.className = 'text-sm text-emerald-600 font-medium';
+        checkConnectionState();
+    } else {
+        status.textContent = 'Error al guardar';
+        status.className = 'text-sm text-red-600 font-medium';
+    }
+});
+
+async function testConnection() {
+    const status = document.getElementById('settings-status');
+    status.textContent = 'Probando...';
+    status.className = 'text-sm text-slate-500';
+
+    const res = await fetch('/settings/test-connection', {method: 'POST'});
+    const data = await res.json();
+
+    if (data.success) {
+        status.textContent = 'Conexion exitosa';
+        status.className = 'text-sm text-emerald-600 font-medium';
+    } else {
+        status.textContent = 'Error: ' + (data.error || 'No se pudo conectar');
+        status.className = 'text-sm text-red-600 font-medium';
+    }
+}
+
+// --- WhatsApp Connection ---
+
+function hideAllStates() {
+    ['unconfigured', 'not-found', 'disconnected', 'connected', 'connecting'].forEach(s => {
+        document.getElementById(`state-${s}`)?.classList.add('hidden');
+    });
+}
+
+function showState(state) {
+    hideAllStates();
+    const el = document.getElementById(`state-${state}`);
+    if (el) el.classList.remove('hidden');
+}
+
+function updateDot(color, label) {
+    const dot = document.getElementById('connection-dot');
+    const lbl = document.getElementById('connection-label');
+    dot.className = 'status-dot';
+    if (color === 'green') { dot.classList.add('online'); lbl.className = 'text-xs font-medium text-emerald-600'; }
+    else if (color === 'red') { dot.classList.add('offline'); lbl.className = 'text-xs font-medium text-red-500'; }
+    else if (color === 'yellow') { dot.classList.add('idle'); dot.style.background = '#EAB308'; lbl.className = 'text-xs font-medium text-yellow-600'; }
+    else { dot.classList.add('idle'); lbl.className = 'text-xs font-medium text-slate-400'; }
+    lbl.textContent = label;
+}
+
+async function checkConnectionState() {
+    try {
+        const res = await fetch('/settings/connection-state');
+        const data = await res.json();
+        switch (data.state) {
+            case 'open': showState('connected'); updateDot('green', 'Conectado'); hideQr(); break;
+            case 'close': showState('disconnected'); updateDot('red', 'Desconectado'); break;
+            case 'connecting': showState('connecting'); updateDot('yellow', 'Conectando...'); break;
+            case 'not_found': showState('not-found'); updateDot('gray', 'Sin instancia'); hideQr(); break;
+            case 'unconfigured': showState('unconfigured'); updateDot('gray', 'Sin configurar'); hideQr(); break;
+            default: showState('not-found'); updateDot('red', data.error || 'Error'); break;
+        }
+    } catch (e) { updateDot('red', 'Error de red'); }
+}
+
+async function createInstance() {
+    const btn = document.getElementById('btn-create');
+    btn.disabled = true; btn.textContent = 'Creando...';
+    setWaStatus('Creando instancia...', 'slate');
+    const res = await fetch('/settings/create-instance', {method: 'POST'});
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Crear instancia';
+    if (data.success) {
+        setWaStatus('Instancia creada', 'emerald');
+        if (data.qrcode) showQr(data.qrcode);
+        checkConnectionState(); startQrRefresh();
+    } else {
+        setWaStatus('Error: ' + (data.error || 'No se pudo crear'), 'red');
+        checkConnectionState();
+    }
+}
+
+async function getQrCode() {
+    const btn = document.getElementById('btn-get-qr');
+    btn.disabled = true; btn.textContent = 'Obteniendo...';
+    setWaStatus('', 'slate');
+    const res = await fetch('/settings/get-qr');
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Obtener codigo QR';
+    if (data.success && data.qrcode) { showQr(data.qrcode); startQrRefresh(); }
+    else { setWaStatus('Error: ' + (data.error || 'No se pudo obtener el QR'), 'red'); }
+}
+
+function showQr(base64) {
+    const container = document.getElementById('qr-container');
+    const img = document.getElementById('qr-image');
+    if (base64 && !base64.startsWith('data:')) base64 = 'data:image/png;base64,' + base64;
+    img.src = base64;
+    container.classList.remove('hidden');
+}
+
+function hideQr() { document.getElementById('qr-container').classList.add('hidden'); stopQrRefresh(); }
+
+function startQrRefresh() {
+    stopQrRefresh();
+    qrRefreshInterval = setInterval(async () => {
+        const res = await fetch('/settings/get-qr');
+        const data = await res.json();
+        if (data.success && data.qrcode) showQr(data.qrcode);
+    }, 30000);
+}
+
+function stopQrRefresh() { if (qrRefreshInterval) { clearInterval(qrRefreshInterval); qrRefreshInterval = null; } }
+
+async function disconnectWhatsApp() {
+    if (!confirm('Estas seguro de desconectar WhatsApp?')) return;
+    const btn = document.getElementById('btn-disconnect');
+    btn.disabled = true; btn.textContent = 'Desconectando...';
+    const res = await fetch('/settings/disconnect', {method: 'POST'});
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Desconectar WhatsApp';
+    setWaStatus(data.success ? 'WhatsApp desconectado' : 'Error: ' + (data.error || 'No se pudo desconectar'), data.success ? 'red' : 'red');
+    checkConnectionState();
+}
+
+async function deleteInstance() {
+    if (!confirm('Estas seguro de eliminar la instancia? Tendras que crearla de nuevo.')) return;
+    const btn = document.getElementById('btn-delete');
+    btn.disabled = true; btn.textContent = 'Eliminando...';
+    const res = await fetch('/settings/delete-instance', {method: 'POST'});
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Eliminar instancia';
+    if (data.success) { setWaStatus('Instancia eliminada', 'slate'); hideQr(); }
+    else { setWaStatus('Error: ' + (data.error || 'No se pudo eliminar'), 'red'); }
+    checkConnectionState();
+}
+
+function setWaStatus(text, color) {
+    const el = document.getElementById('wa-status');
+    el.textContent = text;
+    el.className = `text-sm mt-3 font-medium text-${color}-600`;
+}
+
+// --- Labels ---
+
+async function loadLabels() {
+    const container = document.getElementById('labels-list');
+    try {
+        const res = await fetch('/api/labels');
+        const labels = await res.json();
+        if (labels.length === 0) { container.innerHTML = '<p class="text-sm text-slate-400">No hay etiquetas creadas</p>'; return; }
+        container.innerHTML = labels.map(label => `
+            <span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold"
+                  style="background-color: ${label.color}15; color: ${label.color}; border: 1px solid ${label.color}25;">
+                <span class="w-2 h-2 rounded-full" style="background-color: ${label.color}"></span>
+                ${label.display_name}
+                <button onclick="deleteLabel('${label._id}')" class="ml-1 hover:opacity-70" title="Eliminar">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </span>
+        `).join('');
+    } catch (e) { container.innerHTML = '<p class="text-sm text-red-500">Error al cargar etiquetas</p>'; }
+}
+
+function setupLabelForm() {
+    document.getElementById('label-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const displayName = document.getElementById('label-display-name').value.trim();
+        const color = document.getElementById('label-color').value;
+        if (!displayName) return;
+        const name = displayName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const res = await fetch('/api/labels', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, display_name: displayName, color}),
+        });
+        if (res.ok) { document.getElementById('label-display-name').value = ''; loadLabels(); }
+        else { const data = await res.json(); alert(data.error || 'Error al crear etiqueta'); }
+    });
+}
+
+async function deleteLabel(labelId) {
+    if (!confirm('Eliminar esta etiqueta?')) return;
+    await fetch(`/api/labels/${labelId}`, {method: 'DELETE'});
+    loadLabels();
+}
+
+// --- Webhook ---
+
+async function loadCurrentWebhook() {
+    try {
+        const res = await fetch('/settings/get-webhook');
+        const data = await res.json();
+        if (data.success && data.data) {
+            const webhook = data.data;
+            const container = document.getElementById('webhook-current');
+            const urlEl = document.getElementById('webhook-current-url');
+            const statusEl = document.getElementById('webhook-current-status');
+            const url = webhook.url || webhook.webhook?.url || '';
+            const enabled = webhook.enabled ?? webhook.webhook?.enabled ?? false;
+            if (url) {
+                container.classList.remove('hidden');
+                urlEl.textContent = url;
+                document.getElementById('webhook-url').value = url;
+                statusEl.textContent = enabled ? 'Activo' : 'Inactivo';
+                statusEl.className = enabled ? 'text-xs mt-1 text-emerald-600 font-semibold' : 'text-xs mt-1 text-red-500 font-semibold';
+            }
+        }
+    } catch (e) {}
+}
+
+async function saveWebhook() {
+    const webhookUrl = document.getElementById('webhook-url').value.trim();
+    const status = document.getElementById('webhook-status');
+    if (!webhookUrl) { status.textContent = 'Ingresa una URL'; status.className = 'text-sm text-red-600 font-medium'; return; }
+    const btn = document.getElementById('btn-save-webhook');
+    btn.disabled = true; btn.textContent = 'Guardando...'; status.textContent = '';
+    const res = await fetch('/settings/set-webhook', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({webhook_url: webhookUrl}),
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Guardar webhook';
+    if (data.success) { status.textContent = 'Webhook configurado'; status.className = 'text-sm text-emerald-600 font-medium'; loadCurrentWebhook(); }
+    else { status.textContent = 'Error: ' + (data.error || 'No se pudo configurar'); status.className = 'text-sm text-red-600 font-medium'; }
+}
+</script>
+{% endblock %}

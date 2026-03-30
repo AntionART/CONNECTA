@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}Chat - CONNECTA{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Conversation List Sidebar -->
+    <div class="conversation-list">
+        <div class="conversation-list-header">
+            <h2>Conversaciones</h2>
+            <div class="relative">
+                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" id="search-conversations" placeholder="Buscar..."
+                       class="input pl-9 py-2 bg-slate-50 border-slate-200" style="font-size: 0.8125rem;">
+            </div>
+        </div>
+        <div class="flex items-center gap-1.5 px-4 py-2.5 border-b border-slate-100">
+            <button onclick="filterConversations('all')" class="conv-filter filter-pill active" data-filter="all">Todas</button>
+            <button onclick="filterConversations('open')" class="conv-filter filter-pill" data-filter="open">Abiertas</button>
+            <button onclick="filterConversations('closed')" class="conv-filter filter-pill" data-filter="closed">Cerradas</button>
+        </div>
+        <div id="conversations-list" class="flex-1 overflow-y-auto">
+            <div class="empty-state py-12">
+                <p class="text-sm">Cargando conversaciones...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel">
+        <!-- Chat Header -->
+        <div id="chat-header" class="bg-white border-b border-slate-200 px-5 py-3 hidden">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div id="chat-avatar" class="w-9 h-9 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
+                        <span class="text-xs font-bold text-slate-500" id="chat-avatar-text"></span>
+                    </div>
+                    <div>
+                        <h2 id="chat-contact-name" class="text-sm font-bold text-slate-900"></h2>
+                        <p id="chat-phone" class="text-xs text-slate-400"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div id="chat-labels" class="flex items-center gap-1"></div>
+                    <select id="assign-agent" class="input py-1 px-2 text-xs w-auto" style="min-width: 120px;">
+                        <option value="">Sin asignar</option>
+                    </select>
+                    <button onclick="toggleLabelsPanel()" class="btn btn-ghost" title="Etiquetas">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                    </button>
+                    <button onclick="toggleInfoPanel()" class="btn btn-ghost" title="Info del contacto" id="btn-toggle-info">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    </button>
+                    <button onclick="toggleConversationStatus()" id="btn-toggle-status" class="btn btn-secondary text-xs py-1.5">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+            <div id="labels-panel" class="hidden mt-2 p-2.5 bg-slate-50 rounded-xl">
+                <div id="available-labels" class="flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Messages area -->
+            <div class="flex flex-col flex-1">
+                <div id="messages-container" class="messages-container">
+                    <div class="empty-state">
+                        <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                        <p class="text-sm font-medium">Selecciona una conversacion</p>
+                        <p class="text-xs text-slate-400 mt-1">Elige un chat para comenzar a responder</p>
+                    </div>
+                </div>
+
+                <!-- Message Input -->
+                <div id="message-input-area" class="chat-input-area hidden">
+                    <form id="send-message-form">
+                        <div class="chat-input-wrapper">
+                            <input type="text" id="message-input" placeholder="Escribe un mensaje..."
+                                   autocomplete="off">
+                            <button type="submit" class="chat-send-btn">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Info Panel -->
+            <div id="info-panel" class="hidden info-panel">
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-slate-900">Contacto</h3>
+                    <button onclick="toggleInfoPanel()" class="btn btn-ghost p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto">
+                    <!-- Contact info -->
+                    <div class="p-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
+                                <span class="text-sm font-bold text-slate-500" id="info-avatar-text"></span>
+                            </div>
+                            <div>
+                                <p id="info-contact-name" class="font-semibold text-slate-900"></p>
+                                <p id="info-phone" class="text-xs text-slate-400 mt-0.5"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pets section -->
+                    <div class="p-4 border-b border-slate-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Mascotas</h4>
+                            <button onclick="openPetModalFromChat()" class="link-action text-xs">+ Agregar</button>
+                        </div>
+                        <div id="info-pets-list">
+                            <p class="text-xs text-slate-400">Cargando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Appointments section -->
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Citas</h4>
+                            <button onclick="openAppointmentModalFromChat()" id="btn-new-appointment" class="link-action text-xs hidden">+ Agendar</button>
+                        </div>
+                        <div id="info-appointments-list">
+                            <p class="text-xs text-slate-400">Selecciona una mascota para ver citas</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pet Modal (in chat) -->
+<div id="chat-pet-modal" class="hidden">
+    <div class="modal-backdrop" onclick="closeChatPetModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="chat-pet-modal-title">Nueva mascota</h3>
+                <button onclick="closeChatPetModal()" class="btn btn-ghost p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <form id="chat-pet-form">
+                <div class="modal-body space-y-4">
+                    <input type="hidden" id="chat-pet-id">
+                    <div>
+                        <label class="form-label">Nombre</label>
+                        <input type="text" id="chat-pet-name" required class="input">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Especie</label>
+                            <select id="chat-pet-species" required class="input">
+                                <option value="">Seleccionar</option>
+                                <option value="dog">Perro</option>
+                                <option value="cat">Gato</option>
+                                <option value="bird">Ave</option>
+                                <option value="rabbit">Conejo</option>
+                                <option value="other">Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Raza</label>
+                            <input type="text" id="chat-pet-breed" class="input">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Edad (anos)</label>
+                            <input type="number" id="chat-pet-age" min="0" step="0.1" class="input">
+                        </div>
+                        <div>
+                            <label class="form-label">Peso (kg)</label>
+                            <input type="number" id="chat-pet-weight" min="0" step="0.1" class="input">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label">Nombre del dueno</label>
+                        <input type="text" id="chat-pet-owner-name" class="input">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeChatPetModal()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Appointment Modal (in chat) -->
+<div id="chat-appointment-modal" class="hidden">
+    <div class="modal-backdrop" onclick="closeChatAppointmentModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Nueva cita</h3>
+                <button onclick="closeChatAppointmentModal()" class="btn btn-ghost p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <form id="chat-appointment-form">
+                <div class="modal-body space-y-4">
+                    <div>
+                        <label class="form-label">Mascota</label>
+                        <select id="chat-apt-pet" required class="input">
+                            <option value="">Seleccionar mascota</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Fecha y hora</label>
+                        <input type="datetime-local" id="chat-apt-date" required class="input">
+                    </div>
+                    <div>
+                        <label class="form-label">Motivo</label>
+                        <textarea id="chat-apt-reason" required rows="3" class="input"></textarea>
+                    </div>
+                    <div>
+                        <label class="form-label">Veterinario</label>
+                        <input type="text" id="chat-apt-vet" class="input">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeChatAppointmentModal()" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Agendar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/socket_client.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat_info_panel.js') }}"></script>
+{% endblock %}

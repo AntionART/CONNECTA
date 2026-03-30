@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5050:5000"
+    env_file:
+      - .env
+    depends_on:
+      - mongo
+    volumes:
+      - .:/app
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

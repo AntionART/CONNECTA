@@ -1,0 +1,106 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#FF6B6B', 'primaryTextColor':'#fff', 'primaryBorderColor':'#EE5A52', 'lineColor':'#667BC6', 'secondaryColor':'#4ECDC4', 'tertiaryColor':'#95E1D3'}}}%%
+flowchart TD
+    INICIO([🚀 INICIO]) --> CLIENTE["📱 Cliente envía mensaje<br/>por WhatsApp"]
+    
+    CLIENTE --> VALIDAR{"✔️ VALIDAR DATOS<br/>Temperatura, edad,<br/>historial, teléfono"}
+    
+    VALIDAR -->|❌ INVÁLIDO| REGISTRAR["⚠️ Registrar errores"]
+    REGISTRAR --> NOTIFICAR_ERROR["🔔 Notificar al cliente"]
+    NOTIFICAR_ERROR --> FIN1(["❌ FIN"])
+    
+    VALIDAR -->|✅ VÁLIDO| CLASIFICAR{"🏷️ CLASIFICAR CONSULTA<br/>¿Qué tipo?"}
+    
+    CLASIFICAR -->|🚨 EMERGENCIA| NOTIFICAR_INMEDIATO["⚡ VETERINARIO INMEDIATO<br/>urgencia: ALTA"]
+    NOTIFICAR_INMEDIATO --> FIN2(["❌ FIN"])
+    
+    CLASIFICAR -->|🏥 MÉDICA| ASIGNAR_COLA["📋 Cola Veterinario<br/>urgencia: MEDIA"]
+    ASIGNAR_COLA --> FIN3(["❌ FIN"])
+    
+    CLASIFICAR -->|❓ INFO| RESPONDER_CHATBOT["🤖 Responder Chatbot<br/>urgencia: BAJA"]
+    RESPONDER_CHATBOT --> FIN4(["❌ FIN"])
+    
+    CLASIFICAR -->|📅 CITA| EVALUAR_PRIORIDAD{"👤 EVALUAR PRIORIDAD<br/>¿Frecuente? ¿Bloqueado?"}
+    
+    EVALUAR_PRIORIDAD -->|🚫 BLOQUEADO| NOTIFICAR_BLOQUEO["⛔ Notificar bloqueo"]
+    NOTIFICAR_BLOQUEO --> FIN5(["❌ FIN"])
+    
+    EVALUAR_PRIORIDAD -->|⭐ VIP/EMERGENCIA| ATENCION_INMEDIATA["🎯 Atención Inmediata"]
+    ATENCION_INMEDIATA --> VALIDAR_DISPONIBILIDAD
+    
+    EVALUAR_PRIORIDAD -->|📊 SEGUIMIENTO| ATENCION_TURNO["📍 Atención en Turno"]
+    ATENCION_TURNO --> VALIDAR_DISPONIBILIDAD
+    
+    EVALUAR_PRIORIDAD -->|➡️ COLA| COLA_GENERAL["📄 Cola General"]
+    COLA_GENERAL --> VALIDAR_DISPONIBILIDAD
+    
+    VALIDAR_DISPONIBILIDAD{"🕐 VALIDAR DISPONIBILIDAD<br/>¿Cliente registrado?<br/>¿Mascota válida?"}
+    
+    VALIDAR_DISPONIBILIDAD -->|❌ NO| CITA_RECHAZADA["❌ RECHAZADA<br/>Solicitar datos"]
+    CITA_RECHAZADA --> FIN6(["❌ FIN"])
+    
+    VALIDAR_DISPONIBILIDAD -->|✅ SÍ| HORARIO_DISPONIBLE{"⏰ ¿HORARIO Y<br/>VETERINARIO<br/>DISPONIBLES?"}
+    
+    HORARIO_DISPONIBLE -->|❌ NO| CITA_ESPERA["⏳ EN ESPERA<br/>Proponer alternativas"]
+    CITA_ESPERA --> FIN7(["❌ FIN"])
+    
+    HORARIO_DISPONIBLE -->|✅ SÍ| CITA_CONFIRMADA["✅ CONFIRMADA<br/>📲 Recordatorio WhatsApp"]
+    CITA_CONFIRMADA --> CONSULTA_REALIZADA{"🏥 CONSULTA REALIZADA<br/>¿Diagnóstico<br/>registrado?"}
+    
+    CONSULTA_REALIZADA -->|❌ NO| REGISTRAR_INCIDENCIA["⚠️ Registrar incidencia"]
+    REGISTRAR_INCIDENCIA --> FIN8(["❌ FIN"])
+    
+    CONSULTA_REALIZADA -->|✅ SÍ| REQUIERE_SEGUIMIENTO{"🔄 ¿REQUIERE<br/>SEGUIMIENTO?"}
+    
+    REQUIERE_SEGUIMIENTO -->|✅ SÍ| CREAR_RECORDATORIO["🔔 Crear recordatorio<br/>según gravedad"]
+    CREAR_RECORDATORIO --> MEDICAMENTOS{"💊 ¿MEDICAMENTOS<br/>PRESCRITOS?"}
+    
+    REQUIERE_SEGUIMIENTO -->|❌ NO| MEDICAMENTOS
+    
+    MEDICAMENTOS -->|✅ SÍ| GENERAR_RECOMENDACIONES["💡 Generar recomendaciones<br/>de cuidado"]
+    GENERAR_RECOMENDACIONES --> FIN_FINAL(["✅ FIN EXITOSO"])
+    
+    MEDICAMENTOS -->|❌ NO| SOLO_MONITOREO["👀 Solo monitoreo"]
+    SOLO_MONITOREO --> FIN_FINAL
+    
+    %%Estilos de nodos de inicio y fin
+    style INICIO fill:#00D9FF,stroke:#0099CC,stroke-width:3px,color:#000
+    style FIN_FINAL fill:#2ECC71,stroke:#27AE60,stroke-width:3px,color:#fff
+    style FIN1 fill:#E74C3C,stroke:#C0392B,stroke-width:2px,color:#fff
+    style FIN2 fill:#E74C3C,stroke:#C0392B,stroke-width:2px,color:#fff
+    style FIN3 fill:#E74C3C,stroke:#C0392B,stroke-width:2px,color:#fff
+    style FIN4 fill:#E74C3C,stroke:#C0392B,stroke-width:2px,color:#fff
+    style FIN5 fill:#E74C3C,stroke:#C0392B,stroke-width:2px,color:#fff
+    style FIN6 fill:#E74C3C,stroke:#C0392B,stroke-width:2px,color:#fff
+    style FIN7 fill:#E74C3C,stroke:#C0392B,stroke-width:2px,color:#fff
+    style FIN8 fill:#E74C3C,stroke:#C0392B,stroke-width:2px,color:#fff
+    
+    %%Estilos de decisiones
+    style VALIDAR fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style CLASIFICAR fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style EVALUAR_PRIORIDAD fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style VALIDAR_DISPONIBILIDAD fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style HORARIO_DISPONIBLE fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style CONSULTA_REALIZADA fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style REQUIERE_SEGUIMIENTO fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    style MEDICAMENTOS fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
+    
+    %%Estilos de procesos críticos
+    style NOTIFICAR_INMEDIATO fill:#F39C12,stroke:#D68910,stroke-width:3px,color:#fff
+    style ATENCION_INMEDIATA fill:#F39C12,stroke:#D68910,stroke-width:3px,color:#fff
+    style CITA_CONFIRMADA fill:#F39C12,stroke:#D68910,stroke-width:3px,color:#fff
+    
+    %%Estilos de procesos normales
+    style CLIENTE fill:#3498DB,stroke:#2874A6,stroke-width:2px,color:#fff
+    style REGISTRAR fill:#9B59B6,stroke:#76448A,stroke-width:2px,color:#fff
+    style NOTIFICAR_ERROR fill:#E67E22,stroke:#BA4A00,stroke-width:2px,color:#fff
+    style ASIGNAR_COLA fill:#16A085,stroke:#0E6251,stroke-width:2px,color:#fff
+    style RESPONDER_CHATBOT fill:#16A085,stroke:#0E6251,stroke-width:2px,color:#fff
+    style NOTIFICAR_BLOQUEO fill:#C0392B,stroke:#922B21,stroke-width:2px,color:#fff
+    style ATENCION_TURNO fill:#2980B9,stroke:#1F618D,stroke-width:2px,color:#fff
+    style COLA_GENERAL fill:#2980B9,stroke:#1F618D,stroke-width:2px,color:#fff
+    style CITA_RECHAZADA fill:#E67E22,stroke:#BA4A00,stroke-width:2px,color:#fff
+    style CITA_ESPERA fill:#F39C12,stroke:#D68910,stroke-width:2px,color:#fff
+    style REGISTRAR_INCIDENCIA fill:#E67E22,stroke:#BA4A00,stroke-width:2px,color:#fff
+    style CREAR_RECORDATORIO fill:#8E44AD,stroke:#6C3483,stroke-width:2px,color:#fff
+    style GENERAR_RECOMENDACIONES fill:#27AE60,stroke:#1E8449,stroke-width:2px,color:#fff
+    style SOLO_MONITOREO fill:#27AE60,stroke:#1E8449,stroke-width:2px,color:#fff
