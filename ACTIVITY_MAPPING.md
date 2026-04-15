@@ -317,70 +317,68 @@ mongo.db[Conversation.COLLECTION].create_index([('last_message.timestamp', -1)])
 
 ### GUÍA 7 — Subalgoritmos y Refactorización Funcional
 
-**Objetivo:** Modularización con funciones `def`, lambda functions y refactoring integral del orquestador.
+**Objetivo:** Modularización con `def` de responsabilidad única, `lambda` con `filter`/`map`, y refactoring de lógica dispersa en el proyecto real.
 
 | Actividad | Archivo | Líneas aprox. | Descripción |
 |-----------|---------|---------------|-------------|
-| Act 1: `crear_configuracion_clinica()` | `actividades/avance7/functions.py` | 23-42 | Elimina variables globales: config encapsulada en función |
-| Act 1: `validar_entrada_paciente()` | `actividades/avance7/functions.py` | 45-68 | Validación modular de campos requeridos y rangos de datos |
-| Act 1: `validar_telefono()` | `actividades/avance7/functions.py` | 71-84 | Validación de formato colombiano +57 3XX XXXXXXX |
-| Act 1: `procesar_servicios_con_iva()` | `actividades/avance7/functions.py` | 87-105 | Procesamiento: enriquece lista de servicios con precio+IVA |
-| Act 1: `procesar_citas_del_dia()` | `actividades/avance7/functions.py` | 108-118 | Filtro por fecha usando comprensión de lista |
-| Act 1: `calcular_resumen_financiero()` | `actividades/avance7/functions.py` | 121-139 | Cálculo de métricas financieras del día |
-| Act 1: `transformar_paciente_a_linea()` | `actividades/avance7/functions.py` | 142-155 | Transformación: dict paciente → string formateado |
-| Act 1: `transformar_servicio_a_linea()` | `actividades/avance7/functions.py` | 158-172 | Transformación: dict servicio → línea de tabla con IVA |
-| Act 1: `buscar_paciente_por_id()` | `actividades/avance7/functions.py` | 175-188 | Búsqueda con retorno explícito None (sin excepciones) |
-| Act 1: `generar_estadisticas_servicios()` | `actividades/avance7/functions.py` | 191-207 | Estadísticas agregadas: min, max, promedio de precios |
-| Act 2: `filtrar_caninos / filtrar_felinos` | `actividades/avance7/functions.py` | 218-225 | `filter(lambda p: p['species'] == 'X', pacientes)` |
-| Act 2: `filtrar_saludables / filtrar_citas_*` | `actividades/avance7/functions.py` | 226-236 | Filtros lambda sobre health_status y status de citas |
-| Act 2: `obtener_nombres_pacientes` | `actividades/avance7/functions.py` | 240-242 | `map(lambda p: p['name'], pacientes)` |
-| Act 2: `calcular_precios_con_iva` | `actividades/avance7/functions.py` | 243-245 | `map(lambda p: round(p * 1.19, 2), precios)` |
-| Act 2: `ordenar_servicios_por_precio_*` | `actividades/avance7/functions.py` | 251-258 | `sorted(..., key=lambda s: s['price'], reverse=True/False)` |
-| Act 2: `ordenar_pacientes_por_edad/peso` | `actividades/avance7/functions.py` | 260-267 | `sorted(..., key=lambda p: p['age_years'/'weight_kg'])` |
-| Act 3: `imprimir_cabecera()` | `actividades/avance7/main.py` | 98-111 | Función de presentación: cabecera sin lógica inline |
-| Act 3: `imprimir_seccion_modularizacion()` | `actividades/avance7/main.py` | 114-179 | Demuestra todas las funciones def de Actividad 1 |
-| Act 3: `imprimir_seccion_lambdas()` | `actividades/avance7/main.py` | 182-237 | Demuestra todas las lambdas de Actividad 2 |
-| Act 3: `imprimir_seccion_colecciones()` | `actividades/avance7/main.py` | 240-260 | Impresión de colecciones encapsulada en función |
-| Act 3: `run()` orquestador | `actividades/avance7/main.py` | 269-296 | Función principal: 100% llamadas a funciones, sin lógica dispersa |
+| Act 1: `validar_campos_requeridos()` | `app/utils/helpers.py` | ~129-155 | Subalgorithm reutilizable: reemplaza el for+if de validación en 2 endpoints |
+| Act 1: `_enriquecer_cita_dashboard()` | `app/routes/dashboard.py` | ~14-30 | Extrae lógica inline del for-loop: serializa _id y embebe pet_name |
+| Act 3: Refactoring `create_pet` | `app/routes/api/pets.py` | ~55-58 | Reemplaza for+if por `validar_campos_requeridos()` |
+| Act 3: Refactoring `create_appointment` | `app/routes/api/appointments.py` | ~67-70 | Reemplaza for+if por `validar_campos_requeridos()` |
+| Act 2: `_coincide` lambda | `app/services/nlp.py` | ~8-10 | `lambda mensaje, palabras: any(p in mensaje for p in palabras)` |
+| Act 2: Uso de `_coincide` × 3 | `app/services/nlp.py` | ~32-38 | Reemplaza 3 expresiones `any(p in mensaje for p in [...])` repetidas |
+| Act 2: `map + lambda` serializar convs | `app/routes/dashboard.py` | ~97-100 | `map(lambda c: {**c, '_id': str(c['_id'])}, recent_conversations)` |
+| Act 2: `map + función` enriquecer citas | `app/routes/dashboard.py` | ~109-112 | `map(_enriquecer_cita_dashboard, upcoming_appointments)` |
+| Act 2: `filter + lambda` update pets | `app/routes/api/pets.py` | ~88-90 | `{c: data[c] for c in filter(lambda c: c in data, campos_permitidos)}` |
+| Act 2: `filter + lambda` update appointments | `app/routes/api/appointments.py` | ~113-114 | Mismo patrón filter+lambda para campos de cita |
 
 **Cómo encontrarlo:**
 ```bash
-grep -rn "\[GUIA 7" actividades/avance7/
+grep -rn "\[GUÍA 7" app/
 ```
 
-**Ejemplo real — Act 1 (validación modular):**
+**Ejemplo real — Act 1 (`validar_campos_requeridos` en helpers.py):**
 ```python
-# actividades/avance7/functions.py
-def validar_entrada_paciente(paciente: Dict) -> Dict:
-    errores = []
-    campos_requeridos = ['id', 'name', 'species', 'breed', 'owner', 'age_years', 'weight_kg']
-    for campo in campos_requeridos:
-        if campo not in paciente or paciente[campo] is None:
-            errores.append(f"Campo requerido ausente: '{campo}'")
-    return {"valido": len(errores) == 0, "errores": errores}
+# app/utils/helpers.py
+def validar_campos_requeridos(data: dict, campos: list):
+    """Retorna el primer campo faltante o None si todo está OK."""
+    # [GUÍA 7 - ACTIVIDAD 2] filter + lambda internamente
+    return next(filter(lambda campo: not data.get(campo), campos), None)
+
+# Uso en pets.py y appointments.py — reemplaza el for+if repetido:
+campo_faltante = validar_campos_requeridos(data, ['name', 'species', 'owner_phone'])
+if campo_faltante:
+    return jsonify({'error': f'{campo_faltante} is required'}), 400
 ```
 
-**Ejemplo real — Act 2 (lambda filter + sorted):**
+**Ejemplo real — Act 2 (`_coincide` lambda en nlp.py):**
 ```python
-# actividades/avance7/functions.py
-filtrar_saludables = lambda pacientes: list(
-    filter(lambda p: p['health_status'] == 'Saludable', pacientes)
-)
-ordenar_servicios_por_precio_desc = lambda servicios: sorted(
-    servicios, key=lambda s: s['price'], reverse=True
-)
+# app/services/nlp.py
+# [GUÍA 7 - ACTIVIDAD 2] — reemplaza any(p in mensaje for p in lista) repetido 3 veces
+_coincide = lambda mensaje, palabras: any(p in mensaje for p in palabras)
+
+if _coincide(mensaje, ['cita', 'agendar', 'turno', 'reservar']):
+    return 'agendar_cita'
 ```
 
-**Ejemplo real — Act 3 (orquestador run()):**
+**Ejemplo real — Act 2 (`map` en dashboard.py):**
 ```python
-# actividades/avance7/main.py
-def run() -> None:
-    config = crear_configuracion_clinica()        # sin globales
-    sep = "=" * 70
-    imprimir_cabecera(config, sep)                # función
-    imprimir_seccion_modularizacion(...)          # función
-    imprimir_seccion_lambdas(...)                 # función
-    imprimir_seccion_colecciones(...)             # función
+# app/routes/dashboard.py
+# Antes: for conv in recent_conversations: conv['_id'] = str(conv['_id'])
+recent_conversations = list(map(
+    lambda c: {**c, '_id': str(c['_id'])}, recent_conversations
+))
+
+# Antes: for apt in upcoming_appointments: apt['_id'] = str(...) / apt['pet_name'] = ...
+upcoming_appointments = list(map(_enriquecer_cita_dashboard, upcoming_appointments))
+```
+
+**Ejemplo real — Act 2 (`filter+lambda` dict comprehension en pets.py):**
+```python
+# app/routes/api/pets.py
+# Antes: for field in allowed: if field in data: update[field] = data[field]
+campos_permitidos = ['name', 'species', 'breed', 'age_years', 'weight_kg', 'owner_phone', 'owner_name']
+update = {c: data[c] for c in filter(lambda c: c in data, campos_permitidos)}
 ```
 
 ---
@@ -394,7 +392,7 @@ grep -rn "\[GUÍA 3" app/
 grep -rn "\[GUÍA 4" app/
 grep -rn "\[GUÍA 5" app/
 grep -rn "\[GUÍA 6" app/
-grep -rn "\[GUIA 7" actividades/avance7/
+grep -rn "\[GUÍA 7" app/
 
 # Buscar una actividad específica
 grep -rn "\[GUÍA 3 - ACTIVIDAD 1\]" app/
