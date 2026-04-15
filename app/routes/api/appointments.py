@@ -3,7 +3,7 @@ from flask_login import login_required
 from app.routes.api import api_bp
 from app.models.appointment import Appointment
 from app.models.pet import Pet
-from app.utils.helpers import serialize_doc, serialize_docs, get_or_404
+from app.utils.helpers import serialize_doc, serialize_docs, get_or_404, validar_campos_requeridos
 from datetime import datetime
 
 
@@ -60,14 +60,12 @@ def create_appointment():
     # Ejemplo: data = {'pet_id': '64abc...', 'date': '2025-03-27T10:00', 'reason': 'Vacunación'}
     data = request.get_json()
 
-    # [GUÍA 6 - ACTIVIDAD 1] Vector — lista de campos obligatorios para una cita
-    # Uso en CONNECTA: Una cita requiere mínimo pet_id (qué mascota), date (cuándo)
-    # y reason (por qué); sin estos no se puede agendar
-    # Ejemplo: required = ['pet_id', 'date', 'reason']
-    required = ['pet_id', 'date', 'reason']
-    for field in required:
-        if not data.get(field):
-            return jsonify({'error': f'{field} is required'}), 400
+    # [GUÍA 7 - ACTIVIDAD 1] validar_campos_requeridos: subalgorithm reutilizado desde helpers
+    # Mismo patrón que pets.py — un solo punto de cambio si los requisitos varían.
+    # Ejemplo: validar_campos_requeridos(data, ['pet_id','date','reason']) → 'date' si falta
+    campo_faltante = validar_campos_requeridos(data, ['pet_id', 'date', 'reason'])
+    if campo_faltante:
+        return jsonify({'error': f'{campo_faltante} is required'}), 400
 
     # [GUÍA 3 - ACTIVIDAD 3] Validación — verificar que la mascota existe
     # Uso en CONNECTA: No se puede crear una cita para una mascota que no existe;
@@ -106,13 +104,10 @@ def update_appointment(appointment_id):
     data = request.get_json()
     update = {}
 
-    # [GUÍA 5 - ACTIVIDAD 1] Ciclo for — construcción del dict de update por campos permitidos
-    # Uso en CONNECTA: Solo permite actualizar reason, veterinarian y status de una cita;
-    # protege campos como pet_id y created_at de modificaciones accidentales
-    # Ejemplo: for field in ['reason', 'veterinarian', 'status'] → if field in data → update[field]
-    for field in ['reason', 'veterinarian', 'status']:
-        if field in data:
-            update[field] = data[field]
+    # [GUÍA 7 - ACTIVIDAD 2] filter + lambda: construye update dict de forma funcional
+    # Idéntico al patrón de pets.py — filter selecciona solo campos presentes en el payload.
+    # Ejemplo: data={'status':'confirmed','pet_id':'...'} → update={'status':'confirmed'}
+    update = {c: data[c] for c in filter(lambda c: c in data, ['reason', 'veterinarian', 'status'])}
 
     # [GUÍA 4 - ACTIVIDAD 2] Casting de tipos — str → datetime para update de fecha
     # Uso en CONNECTA: Al reschedular una cita, la nueva fecha llega como string;

@@ -123,3 +123,29 @@ def get_or_404(model, doc_id):
     if not doc:
         return None, (jsonify({'error': 'Not found'}), 404)
     return doc, None
+
+
+# [GUÍA 7 - ACTIVIDAD 1] - Validación modular de campos requeridos
+def validar_campos_requeridos(data: dict, campos: list):
+    """
+    Verifica que los campos requeridos estén presentes y no vacíos en el payload.
+    Reemplaza el patrón for+if repetido en múltiples endpoints, centralizando
+    la lógica de validación en un único subalgorithm reutilizable.
+
+    Params:
+        data (dict): Payload recibido (request.get_json())
+        campos (list): Lista de nombres de campos obligatorios
+
+    Returns:
+        str | None: Nombre del primer campo faltante, o None si todo está OK
+
+    Ejemplo:
+        >>> validar_campos_requeridos({'name': 'Luna'}, ['name', 'species'])
+        'species'
+        >>> validar_campos_requeridos({'name': 'Luna', 'species': 'Perro'}, ['name', 'species'])
+        None
+    """
+    # [GUÍA 7 - ACTIVIDAD 2] filter + lambda: recorre solo los campos que faltan
+    # Ventaja: next(filter(...), None) es O(n) en el peor caso pero hace cortocircuito
+    # al encontrar el primero — idéntico comportamiento al for original
+    return next(filter(lambda campo: not data.get(campo), campos), None)

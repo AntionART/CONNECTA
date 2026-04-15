@@ -2,7 +2,7 @@ from flask import request, jsonify
 from flask_login import login_required
 from app.routes.api import api_bp
 from app.models.pet import Pet
-from app.utils.helpers import serialize_doc, serialize_docs, get_or_404
+from app.utils.helpers import serialize_doc, serialize_docs, get_or_404, validar_campos_requeridos
 
 
 @api_bp.route('/pets', methods=['GET'])
@@ -43,23 +43,13 @@ def create_pet():
     # Ejemplo: data = {'name': 'Luna', 'species': 'Perro', 'owner_phone': '573001234567'}
     data = request.get_json()
 
-    # [GUÍA 6 - ACTIVIDAD 1] Vector — lista 1D de campos obligatorios
-    # Uso en CONNECTA: required define los 3 campos mínimos sin los cuales
-    # no se puede crear una mascota; se itera para validar cada uno
-    # Ejemplo: required = ['name', 'species', 'owner_phone']
-    required = ['name', 'species', 'owner_phone']
-
-    # [GUÍA 5 - ACTIVIDAD 1] Ciclo for — validación de campos requeridos
-    # Uso en CONNECTA: Itera el vector required; si cualquier campo falta en data
-    # retorna 400 con el nombre del campo faltante en el mensaje de error
-    # Ejemplo: for field in required → if not data.get('name') → return 400 'name is required'
-    for field in required:
-        if not data.get(field):
-            # [GUÍA 4 - ACTIVIDAD 3] F-string en mensaje de error dinámico
-            # Uso en CONNECTA: El nombre del campo faltante se embebe en el error
-            # para que el frontend pueda mostrar exactamente qué hace falta
-            # Ejemplo: f'{field} is required' → 'species is required'
-            return jsonify({'error': f'{field} is required'}), 400
+    # [GUÍA 7 - ACTIVIDAD 1] validar_campos_requeridos: reemplaza el for+if de validación
+    # Uso en CONNECTA: Centraliza la lógica de validación de campos obligatorios;
+    # retorna el primer campo faltante o None si todo está OK.
+    # Ejemplo: validar_campos_requeridos(data, ['name','species','owner_phone']) → 'species'
+    campo_faltante = validar_campos_requeridos(data, ['name', 'species', 'owner_phone'])
+    if campo_faltante:
+        return jsonify({'error': f'{campo_faltante} is required'}), 400
 
     pet = Pet.create(
         name=data['name'],
@@ -86,18 +76,12 @@ def update_pet(pet_id):
     data = request.get_json()
     update = {}
 
-    # [GUÍA 6 - ACTIVIDAD 1] Vector — lista 1D de campos actualizables
-    # Uso en CONNECTA: allowed_fields define exactamente qué campos del modelo
-    # Pet puede actualizar el usuario; evita que envíen campos no autorizados
-    # Ejemplo: ['name', 'species', 'breed', 'age_years', 'weight_kg', 'owner_phone', 'owner_name']
-
-    # [GUÍA 5 - ACTIVIDAD 1] Ciclo for — construcción selectiva del dict de update
-    # Uso en CONNECTA: Solo los campos que el cliente envió Y que están en la lista
-    # se incluyen en el update; protege campos internos como created_at
-    # Ejemplo: data={'name':'Max', 'age_years':3} → update={'name':'Max', 'age_years':3}
-    for field in ['name', 'species', 'breed', 'age_years', 'weight_kg', 'owner_phone', 'owner_name']:
-        if field in data:
-            update[field] = data[field]
+    # [GUÍA 7 - ACTIVIDAD 2] filter + lambda: construye el dict de update de forma funcional
+    # filter(lambda c: c in data, campos_permitidos) → solo los campos que llegaron en el payload
+    # El dict comprehension los extrae: protege campos internos (created_at, _id) sin for explícito.
+    # Ejemplo: data={'name':'Max','created_at':'...'} → update={'name':'Max'} (created_at ignorado)
+    campos_permitidos = ['name', 'species', 'breed', 'age_years', 'weight_kg', 'owner_phone', 'owner_name']
+    update = {c: data[c] for c in filter(lambda c: c in data, campos_permitidos)}
 
     if update:
         Pet.update(pet_id, update)

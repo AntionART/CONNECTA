@@ -11,6 +11,28 @@ from datetime import datetime, timezone, timedelta
 dashboard_bp = Blueprint('dashboard', __name__)
 
 
+# [GUÍA 7 - ACTIVIDAD 1] - Subalgorithm: enriquece una cita con el nombre de su mascota
+def _enriquecer_cita_dashboard(apt):
+    """
+    Serializa el _id de una cita y embebe el nombre de la mascota asociada.
+    Extrae la lógica inline del for-loop del dashboard en una función de
+    responsabilidad única, reutilizable con map().
+
+    Params:
+        apt (dict): Documento de cita de MongoDB (upcoming_appointments)
+
+    Returns:
+        dict: Cita con _id y pet_id serializados y campo pet_name agregado
+    """
+    pet = mongo.db.pets.find_one({'_id': apt['pet_id']})
+    return {
+        **apt,
+        '_id': str(apt['_id']),
+        'pet_id': str(apt['pet_id']),
+        'pet_name': pet['name'] if pet else 'Desconocida',
+    }
+
+
 @dashboard_bp.route('/')
 @login_required
 def index():
@@ -75,12 +97,13 @@ def index():
         .limit(5)
     )
 
-    # [GUÍA 5 - ACTIVIDAD 1] Ciclo for — serialización de IDs de conversaciones
-    # Uso en CONNECTA: ObjectId de MongoDB no es serializable a JSON/Jinja2;
-    # el for convierte cada _id a str para que el template pueda usarlo
-    # Ejemplo: for conv in recent_conversations: conv['_id'] = str(conv['_id'])
-    for conv in recent_conversations:
-        conv['_id'] = str(conv['_id'])
+    # [GUÍA 7 - ACTIVIDAD 2] map + lambda: serializa _id de cada conversación
+    # Reemplaza el for-loop de mutación por una transformación funcional pura.
+    # Ventaja: no muta los dicts originales — retorna nuevos dicts con _id como str.
+    # Ejemplo: lambda c: {**c, '_id': str(c['_id'])} → copia el dict cambiando solo _id
+    recent_conversations = list(map(
+        lambda c: {**c, '_id': str(c['_id'])}, recent_conversations
+    ))
 
     # [GUÍA 5 - ACTIVIDAD 5] Lista de diccionarios — citas enriquecidas con datos de mascota
     # Uso en CONNECTA: Cada cita en upcoming_appointments es un dict que se
@@ -93,19 +116,12 @@ def index():
         .limit(5)
     )
 
-    # [GUÍA 6 - ACTIVIDAD 3] Ciclo anidado — for sobre lista + consulta DB por cada elemento
-    # Uso en CONNECTA: Por cada cita (ciclo externo), hace un find_one a pets (ciclo interno
-    # implícito de MongoDB) para obtener el nombre de la mascota y agregarlo al dict
-    # Ejemplo: for apt in upcoming_appointments → apt['pet_name'] = pet['name'] if pet else 'Desconocida'
-    for apt in upcoming_appointments:
-        apt['_id'] = str(apt['_id'])
-        # [GUÍA 5 - ACTIVIDAD 4] Diccionario — enriquecimiento dinámico con nueva clave
-        # Uso en CONNECTA: Se agrega la clave 'pet_name' al dict de la cita en tiempo de
-        # ejecución para no tener que cambiar el modelo de datos en MongoDB
-        # Ejemplo: apt['pet_name'] = 'Luna' (si existe) o 'Desconocida' (si fue eliminada)
-        pet = mongo.db.pets.find_one({'_id': apt['pet_id']})
-        apt['pet_name'] = pet['name'] if pet else 'Desconocida'
-        apt['pet_id'] = str(apt['pet_id'])
+    # [GUÍA 7 - ACTIVIDAD 2] map + función modular: reemplaza el for-loop anidado
+    # _enriquecer_cita_dashboard encapsula la lógica (serializar + buscar mascota);
+    # map la aplica a cada cita sin mutar la lista original elemento por elemento.
+    # Ejemplo: map(_enriquecer_cita_dashboard, upcoming_appointments)
+    #          → cada apt sale con _id:str, pet_id:str y pet_name embebido
+    upcoming_appointments = list(map(_enriquecer_cita_dashboard, upcoming_appointments))
 
     return render_template(
         'dashboard/index.html',
