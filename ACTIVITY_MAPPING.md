@@ -315,6 +315,76 @@ mongo.db[Conversation.COLLECTION].create_index([('last_message.timestamp', -1)])
 
 ---
 
+### GUÍA 7 — Subalgoritmos y Refactorización Funcional
+
+**Objetivo:** Modularización con funciones `def`, lambda functions y refactoring integral del orquestador.
+
+| Actividad | Archivo | Líneas aprox. | Descripción |
+|-----------|---------|---------------|-------------|
+| Act 1: `crear_configuracion_clinica()` | `actividades/avance7/functions.py` | 23-42 | Elimina variables globales: config encapsulada en función |
+| Act 1: `validar_entrada_paciente()` | `actividades/avance7/functions.py` | 45-68 | Validación modular de campos requeridos y rangos de datos |
+| Act 1: `validar_telefono()` | `actividades/avance7/functions.py` | 71-84 | Validación de formato colombiano +57 3XX XXXXXXX |
+| Act 1: `procesar_servicios_con_iva()` | `actividades/avance7/functions.py` | 87-105 | Procesamiento: enriquece lista de servicios con precio+IVA |
+| Act 1: `procesar_citas_del_dia()` | `actividades/avance7/functions.py` | 108-118 | Filtro por fecha usando comprensión de lista |
+| Act 1: `calcular_resumen_financiero()` | `actividades/avance7/functions.py` | 121-139 | Cálculo de métricas financieras del día |
+| Act 1: `transformar_paciente_a_linea()` | `actividades/avance7/functions.py` | 142-155 | Transformación: dict paciente → string formateado |
+| Act 1: `transformar_servicio_a_linea()` | `actividades/avance7/functions.py` | 158-172 | Transformación: dict servicio → línea de tabla con IVA |
+| Act 1: `buscar_paciente_por_id()` | `actividades/avance7/functions.py` | 175-188 | Búsqueda con retorno explícito None (sin excepciones) |
+| Act 1: `generar_estadisticas_servicios()` | `actividades/avance7/functions.py` | 191-207 | Estadísticas agregadas: min, max, promedio de precios |
+| Act 2: `filtrar_caninos / filtrar_felinos` | `actividades/avance7/functions.py` | 218-225 | `filter(lambda p: p['species'] == 'X', pacientes)` |
+| Act 2: `filtrar_saludables / filtrar_citas_*` | `actividades/avance7/functions.py` | 226-236 | Filtros lambda sobre health_status y status de citas |
+| Act 2: `obtener_nombres_pacientes` | `actividades/avance7/functions.py` | 240-242 | `map(lambda p: p['name'], pacientes)` |
+| Act 2: `calcular_precios_con_iva` | `actividades/avance7/functions.py` | 243-245 | `map(lambda p: round(p * 1.19, 2), precios)` |
+| Act 2: `ordenar_servicios_por_precio_*` | `actividades/avance7/functions.py` | 251-258 | `sorted(..., key=lambda s: s['price'], reverse=True/False)` |
+| Act 2: `ordenar_pacientes_por_edad/peso` | `actividades/avance7/functions.py` | 260-267 | `sorted(..., key=lambda p: p['age_years'/'weight_kg'])` |
+| Act 3: `imprimir_cabecera()` | `actividades/avance7/main.py` | 98-111 | Función de presentación: cabecera sin lógica inline |
+| Act 3: `imprimir_seccion_modularizacion()` | `actividades/avance7/main.py` | 114-179 | Demuestra todas las funciones def de Actividad 1 |
+| Act 3: `imprimir_seccion_lambdas()` | `actividades/avance7/main.py` | 182-237 | Demuestra todas las lambdas de Actividad 2 |
+| Act 3: `imprimir_seccion_colecciones()` | `actividades/avance7/main.py` | 240-260 | Impresión de colecciones encapsulada en función |
+| Act 3: `run()` orquestador | `actividades/avance7/main.py` | 269-296 | Función principal: 100% llamadas a funciones, sin lógica dispersa |
+
+**Cómo encontrarlo:**
+```bash
+grep -rn "\[GUIA 7" actividades/avance7/
+```
+
+**Ejemplo real — Act 1 (validación modular):**
+```python
+# actividades/avance7/functions.py
+def validar_entrada_paciente(paciente: Dict) -> Dict:
+    errores = []
+    campos_requeridos = ['id', 'name', 'species', 'breed', 'owner', 'age_years', 'weight_kg']
+    for campo in campos_requeridos:
+        if campo not in paciente or paciente[campo] is None:
+            errores.append(f"Campo requerido ausente: '{campo}'")
+    return {"valido": len(errores) == 0, "errores": errores}
+```
+
+**Ejemplo real — Act 2 (lambda filter + sorted):**
+```python
+# actividades/avance7/functions.py
+filtrar_saludables = lambda pacientes: list(
+    filter(lambda p: p['health_status'] == 'Saludable', pacientes)
+)
+ordenar_servicios_por_precio_desc = lambda servicios: sorted(
+    servicios, key=lambda s: s['price'], reverse=True
+)
+```
+
+**Ejemplo real — Act 3 (orquestador run()):**
+```python
+# actividades/avance7/main.py
+def run() -> None:
+    config = crear_configuracion_clinica()        # sin globales
+    sep = "=" * 70
+    imprimir_cabecera(config, sep)                # función
+    imprimir_seccion_modularizacion(...)          # función
+    imprimir_seccion_lambdas(...)                 # función
+    imprimir_seccion_colecciones(...)             # función
+```
+
+---
+
 ## Patrones de Búsqueda
 
 ```bash
@@ -324,6 +394,7 @@ grep -rn "\[GUÍA 3" app/
 grep -rn "\[GUÍA 4" app/
 grep -rn "\[GUÍA 5" app/
 grep -rn "\[GUÍA 6" app/
+grep -rn "\[GUIA 7" actividades/avance7/
 
 # Buscar una actividad específica
 grep -rn "\[GUÍA 3 - ACTIVIDAD 1\]" app/
@@ -348,6 +419,7 @@ grep -rn "\[GUÍA" app/
 | Guía 4 — Input/Output | ✅ | ✅ | ✅ |
 | Guía 5 — Loops & Diccionarios | ✅ | ✅ | ✅ |
 | Guía 6 — Arrays & Matrices | ✅ | ✅ | ✅ |
+| Guía 7 — Subalgoritmos & Lambdas | ✅ | ✅ | ✅ |
 
 ---
 
