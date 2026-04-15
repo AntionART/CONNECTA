@@ -5,6 +5,12 @@ Bilingualism: Keywords are in Spanish (matching user messages), responses in Spa
 """
 
 
+# [GUÍA 7 - ACTIVIDAD 2] Lambda: verifica si alguna palabra clave aparece en el mensaje
+# Reemplaza el patrón any(p in mensaje for p in lista) repetido 3 veces en detectar_intencion.
+# Ventaja: el predicado queda nombrado y reutilizable en ambas funciones del módulo.
+_coincide = lambda mensaje, palabras: any(p in mensaje for p in palabras)
+
+
 # [GUÍA 2 - ACTIVIDAD 2] String manipulation — .lower() para normalizar entrada
 # Uso en CONNECTA: El mensaje del usuario se convierte a minúsculas antes de comparar,
 # garantizando que 'Cita', 'CITA' y 'cita' sean tratados igual.
@@ -29,11 +35,12 @@ def detectar_intencion(mensaje):
     # Uso en CONNECTA: Clasifica el mensaje en 4 ramas posibles según palabras clave;
     # el orden importa (cita tiene prioridad sobre consulta)
     # Ejemplo: si mensaje contiene 'agendar' → rama 1; si contiene 'historial' → rama 2
-    if any(palabra in mensaje for palabra in ['cita', 'agendar', 'turno', 'reservar']):
+    # [GUÍA 7 - ACTIVIDAD 2] Uso de lambda _coincide: elimina la repetición de any(p in ...)
+    if _coincide(mensaje, ['cita', 'agendar', 'turno', 'reservar']):
         return 'agendar_cita'
-    elif any(palabra in mensaje for palabra in ['historial', 'registro', 'consultas anteriores']):
+    elif _coincide(mensaje, ['historial', 'registro', 'consultas anteriores']):
         return 'historial'
-    elif any(palabra in mensaje for palabra in ['síntoma', 'enfermo', 'dolor', 'consulta']):
+    elif _coincide(mensaje, ['síntoma', 'enfermo', 'dolor', 'consulta']):
         return 'consulta'
     else:
         return 'desconocido'
