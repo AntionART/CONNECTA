@@ -97,3 +97,28 @@ def delete_pet(pet_id):
         return err
     Pet.delete(pet_id)
     return jsonify({'status': 'deleted'}), 200
+
+
+@api_bp.route('/pets/export/csv', methods=['GET'])
+@login_required
+def export_pets_csv():
+    """
+    # [GUÍA 8 - ACTIVIDAD 2]
+    Endpoint REST que exporta todas las mascotas registradas en MongoDB
+    a un archivo CSV en exports/mascotas.csv y retorna confirmación JSON.
+    Integra exportar_mascotas_csv() de app/utils/persistence.py.
+    """
+    from app.extensions import mongo
+    from app.utils.persistence import exportar_mascotas_csv
+
+    # Consulta todos los documentos y serializa _id como str
+    mascotas = list(mongo.db.pets.find({}))
+    for mascota in mascotas:
+        mascota['_id'] = str(mascota['_id'])
+
+    ok = exportar_mascotas_csv(mascotas)
+    return jsonify({
+        'ok': ok,
+        'mensaje': 'Exportación completada' if ok else 'Error en la exportación',
+        'total': len(mascotas)
+    })

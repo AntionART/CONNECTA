@@ -383,6 +383,93 @@ update = {c: data[c] for c in filter(lambda c: c in data, campos_permitidos)}
 
 ---
 
+### GUÍA 8 — Data Persistence (Gestión de Archivos)
+
+**Objetivo:** Lectura y escritura de archivos TXT con modos `'w'` y `'a'`, exportación CSV con el módulo nativo `csv`, y manejo robusto de excepciones I/O con f-strings estructurados.
+
+| Actividad | Archivo | Líneas aprox. | Descripción |
+|-----------|---------|---------------|-------------|
+| Act 1: `guardar_estado_sesion()` — modo `'w'` | `app/utils/persistence.py` | ~22-37 | Sobreescribe estado de sesión CONNECTA en TXT con `open(ruta, 'w')` |
+| Act 1: `registrar_evento_webhook()` — modo `'a'` | `app/utils/persistence.py` | ~40-57 | Acumula eventos webhook con timestamp ISO 8601 con `open(ruta, 'a')` |
+| Act 1: `cargar_estado_sesion()` — modo `'r'` | `app/utils/persistence.py` | ~60-79 | Restaura estado de sesión al arrancar; retorna `{}` en primera ejecución |
+| Act 1: `leer_log_webhook()` — modo `'r'` | `app/utils/persistence.py` | ~82-95 | Lee log histórico de webhook; retorna lista de líneas |
+| Act 2: `exportar_mascotas_csv()` — `csv.DictWriter` | `app/utils/persistence.py` | ~98-122 | Exporta colección de mascotas a CSV con headers dinámicos desde dict |
+| Act 2: `exportar_citas_csv()` — `csv.DictWriter` | `app/utils/persistence.py` | ~125-147 | Exporta listado de citas (date, status, pet_name, owner_phone, notes) |
+| Act 2: Endpoint `GET /api/pets/export/csv` | `app/routes/api/pets.py` | ~102-126 | REST endpoint que invoca `exportar_mascotas_csv()` y retorna JSON |
+| Act 3: `try/except` I/O en todas las funciones | `app/utils/persistence.py` | ~22-147 | Captura `FileNotFoundError`, `PermissionError`, `OSError`; mensajes con f-strings |
+
+**Cómo encontrarlo:**
+```bash
+grep -rn "\[GUÍA 8" app/
+```
+
+**Ejemplo real — Act 1 (modo `'w'` sobreescribir estado de sesión):**
+```python
+# app/utils/persistence.py
+# [GUÍA 8 - ACTIVIDAD 1] Modo 'w': sobreescribe para mantener solo el estado más reciente
+with open(ruta, 'w', encoding='utf-8') as f:
+    for clave, valor in datos.items():
+        f.write(f"{clave}={valor}\n")
+```
+
+**Ejemplo real — Act 1 (modo `'a'` acumular log de webhook):**
+```python
+# app/utils/persistence.py
+# [GUÍA 8 - ACTIVIDAD 1] Modo 'a': append preserva el historial completo de eventos
+timestamp = datetime.now(timezone.utc).isoformat()
+with open(ruta, 'a', encoding='utf-8') as f:
+    f.write(f"[{timestamp}] {evento}\n")
+```
+
+**Ejemplo real — Act 2 (`csv.DictWriter` para exportación de mascotas):**
+```python
+# app/utils/persistence.py
+# [GUÍA 8 - ACTIVIDAD 2] Headers dinámicos desde claves del primer dict
+headers = list(mascotas[0].keys())
+with open(ruta, 'w', newline='', encoding='utf-8') as f:
+    writer = csv.DictWriter(f, fieldnames=headers)
+    writer.writeheader()
+    writer.writerows(mascotas)
+```
+
+**Ejemplo real — Act 3 (`try/except` con f-strings profesionales):**
+```python
+# app/utils/persistence.py
+# [GUÍA 8 - ACTIVIDAD 3] Captura errores I/O con mensajes estructurados
+try:
+    with open(ruta, 'w', encoding='utf-8') as f:
+        ...
+    print(f"[OK] Archivo guardado correctamente en {ruta}")
+    return True
+except (FileNotFoundError, PermissionError, OSError) as e:
+    print(f"[ERROR] No se pudo acceder a {ruta}: {e}")
+    return False
+```
+
+> **Nota arquitectónica — TXT/CSV complementan MongoDB, no lo reemplazan**
+>
+> CONNECTA usa MongoDB como persistencia primaria (mascotas, citas, conversaciones).
+> Los archivos planos cumplen roles complementarios específicos:
+>
+> - **TXT (estado de sesión):** Docker puede reiniciar el contenedor en cualquier momento.
+>   `session_state.txt` captura el último estado operativo para recuperación rápida
+>   sin necesidad de reconectar y re-sincronizar con MongoDB al arranque.
+>
+> - **TXT (log de webhook):** WhatsApp/Evolution API envía eventos que MongoDB almacena
+>   para consulta estructurada. El log TXT provee un audit trail plano legible por humanos
+>   (`grep`, `cat`) sin necesidad de cliente MongoDB — útil en depuración de incidentes.
+>
+> - **CSV (exportaciones):** Los veterinarios y administradores necesitan analizar datos
+>   en Excel/Google Sheets. MongoDB no es la herramienta natural para eso; CSV es el
+>   formato universal de interoperabilidad con herramientas de oficina.
+>
+> **Equivalencia con Guía 4:** Así como `input()` se implementa via `request.get_json()`
+> en una API REST, el concepto académico de "gestión de archivos" se implementa donde
+> tiene sentido: en utilidades de respaldo, auditoría y exportación — no en el core
+> de la API donde MongoDB es la capa de persistencia correcta.
+
+---
+
 ## Patrones de Búsqueda
 
 ```bash
@@ -393,6 +480,7 @@ grep -rn "\[GUÍA 4" app/
 grep -rn "\[GUÍA 5" app/
 grep -rn "\[GUÍA 6" app/
 grep -rn "\[GUÍA 7" app/
+grep -rn "\[GUÍA 8" app/
 
 # Buscar una actividad específica
 grep -rn "\[GUÍA 3 - ACTIVIDAD 1\]" app/
@@ -418,6 +506,7 @@ grep -rn "\[GUÍA" app/
 | Guía 5 — Loops & Diccionarios | ✅ | ✅ | ✅ |
 | Guía 6 — Arrays & Matrices | ✅ | ✅ | ✅ |
 | Guía 7 — Subalgoritmos & Lambdas | ✅ | ✅ | ✅ |
+| Guía 8 — Data Persistence | ✅ | ✅ | ✅ |
 
 ---
 
@@ -455,8 +544,17 @@ CONNECTA_Pets/
 │   │                             GUÍA 5 (Act 1, 4), GUÍA 6 (Act 1)
 │   │
 │   └── utils/
-│       └── helpers.py         → GUÍA 2 (Act 3), GUÍA 3 (Act 1), GUÍA 4 (Act 2),
-│                                  GUÍA 5 (Act 1), GUÍA 6 (Act 3)
+│       ├── helpers.py         → GUÍA 2 (Act 3), GUÍA 3 (Act 1), GUÍA 4 (Act 2),
+│       │                          GUÍA 5 (Act 1), GUÍA 6 (Act 3)
+│       └── persistence.py     → GUÍA 8 (Act 1, 2, 3)
+│
+├── data/
+│   ├── session_state.txt      → GUÍA 8 (Act 1) — respaldo de estado de sesión
+│   └── webhook_log.txt        → GUÍA 8 (Act 1) — audit trail de eventos WhatsApp
+│
+├── exports/
+│   ├── mascotas.csv           → GUÍA 8 (Act 2) — exportación para hojas de cálculo
+│   └── citas.csv              → GUÍA 8 (Act 2) — exportación para hojas de cálculo
 │
 └── ACTIVITY_MAPPING.md        ← este archivo
 ```
@@ -479,6 +577,8 @@ CONNECTA_Pets/
 4. **PEP 8 obligatorio:** Nombres en snake_case, líneas ≤ 79 caracteres en comentarios,
    imports organizados (stdlib → third-party → local), docstrings en funciones públicas.
 
-5. **Logging en lugar de print():** `current_app.logger.error(f'...')` es el estándar
-   de producción en Flask. `print()` no aparece en el código de la app (solo podría
-   usarse en scripts de utilidad fuera de la app).
+5. **Logging vs print():** `current_app.logger.error(f'...')` es el estándar de
+   producción en los routes y services de Flask. `print()` se usa en
+   `app/utils/persistence.py` (Guía 8) porque este módulo de utilidades opera
+   fuera del ciclo de request y sus mensajes deben ser visibles en stdout/Docker
+   logs durante operaciones de I/O de archivos.
