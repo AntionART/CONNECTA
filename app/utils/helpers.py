@@ -94,6 +94,7 @@ def save_message_and_notify(conversation_id, direction, sender_type,
 
     is_from_contact = direction == 'inbound'
 
+    # [GUÍA 9 - ACTIVIDAD 3] Message.create() retorna instancia Message (no dict crudo)
     msg = Message.create(
         conversation_id=conversation_id,
         direction=direction,
@@ -103,12 +104,13 @@ def save_message_and_notify(conversation_id, direction, sender_type,
     )
     Conversation.update_last_message(conversation_id, content.get('text', ''), is_from_contact)
 
+    # [GUÍA 9 - ACTIVIDAD 3] find_by_id retorna instancia Conversation; .to_dict() serializa
     updated_conv = Conversation.find_by_id(conversation_id)
     socketio.emit('new_message', {
         'conversation_id': conversation_id,
-        'message': serialize_doc(msg),
+        'message': msg.to_dict(),
     })
-    socketio.emit('conversation_updated', serialize_doc(updated_conv))
+    socketio.emit('conversation_updated', updated_conv.to_dict())
 
     return msg
 

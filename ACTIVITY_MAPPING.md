@@ -470,6 +470,147 @@ except (FileNotFoundError, PermissionError, OSError) as e:
 
 ---
 
+---
+
+### GUÍA 9 — Programación Orientada a Objetos (POO) Nivel I
+
+**Objetivo:** Modelado completo de entidades con `__init__`, `from_db`, `to_dict`, `__str__`, `__repr__`, encapsulamiento con `_atributo`, `@property` / setter, y métodos de instancia migrados desde funciones sueltas.
+
+**Actividad 1 — Modelado de Entidades:**
+
+| Clase | Archivo | Línea `__init__` | Línea `from_db` | Línea `to_dict` | Línea `__str__` | Línea `__repr__` |
+|-------|---------|-----------------|----------------|----------------|----------------|-----------------|
+| Pet | `app/models/pet.py` | L23 | L49 | L68 | L93 | L101 |
+| Appointment | `app/models/appointment.py` | L30 | L51 | L68 | L95 | L108 |
+| Conversation | `app/models/conversation.py` | L23 | L54 | L73 | L106 | L116 |
+| Message | `app/models/message.py` | L22 | L44 | L63 | L82 | L91 |
+| BaseModel (template) | `app/models/base.py` | — | L22 (default) | — | — | — |
+
+**Atributos sensibles (`_atributo`) por clase:**
+| Atributo | Clase | Razón del encapsulamiento |
+|----------|-------|--------------------------|
+| `_owner_phone` | Pet | PII — número WhatsApp del dueño |
+| `_owner_name` | Pet | PII — nombre del dueño |
+| `_status` | Appointment | Ciclo de vida controlado con validación |
+| `_phone_number` | Conversation | PII inmutable tras la creación |
+| `_status` | Conversation | Estado del hilo ('open'/'closed') |
+| `_unread_count` | Conversation | Contador gestionado solo por BD |
+| `_status` | Message | Pipeline de entrega WhatsApp |
+
+**Actividad 2 — Métodos y Properties:**
+
+| Método / Property | Clase | Archivo | Línea | Origen |
+|-------------------|-------|---------|-------|--------|
+| `owner_phone` (getter) | Pet | `app/models/pet.py` | L108 | nuevo |
+| `owner_phone.setter` | Pet | `app/models/pet.py` | L113 | nuevo |
+| `owner_name` (getter) | Pet | `app/models/pet.py` | L121 | nuevo |
+| `owner_name.setter` | Pet | `app/models/pet.py` | L126 | nuevo |
+| `pertenece_a(phone)` | Pet | `app/models/pet.py` | L132 | nuevo — encapsula comparación PII |
+| `status` (getter) | Appointment | `app/models/appointment.py` | L115 | nuevo |
+| `status.setter` (valida STATUSES) | Appointment | `app/models/appointment.py` | L121 | nuevo |
+| `enriquecer_dashboard()` | Appointment | `app/models/appointment.py` | L133 | migrado de `dashboard.py._enriquecer_cita_dashboard` |
+| `enriquecer_api()` | Appointment | `app/models/appointment.py` | L148 | migrado de `appointments.py._enrich_appointment` |
+| `phone_number` (read-only) | Conversation | `app/models/conversation.py` | L124 | nuevo — PII inmutable |
+| `status` (getter) | Conversation | `app/models/conversation.py` | L130 | nuevo |
+| `status.setter` | Conversation | `app/models/conversation.py` | L136 | nuevo |
+| `unread_count` (read-only) | Conversation | `app/models/conversation.py` | L144 | nuevo |
+| `status` (read-only) | Message | `app/models/message.py` | L98 | nuevo |
+
+**Actividad 3 — Reingeniería del Sistema:**
+
+| Punto de refactorización | Archivo | Línea | Descripción |
+|--------------------------|---------|-------|-------------|
+| `BaseModel.from_db()` patrón Template Method | `app/models/base.py` | L22 | Default retorna dict crudo; `find_by_id` delega a `cls.from_db()` |
+| `BaseModel.find_by_id()` usa `from_db` | `app/models/base.py` | L27 | `Pet.find_by_id()` → Pet, `Appointment.find_by_id()` → Appointment, etc. |
+| `Pet.create()` retorna instancia | `app/models/pet.py` | L154 | `from_db(doc)` al final en lugar de retornar dict crudo |
+| `Pet.list_all/find_by_owner_phone` retornan listas de instancias | `app/models/pet.py` | L148–L160 | `[Pet.from_db(doc) for doc in docs]` |
+| `Appointment.create()` retorna instancia | `app/models/appointment.py` | L169 | `from_db(doc)` al final |
+| `Appointment.list_all/find_by_pet/list_today` retornan instancias | `app/models/appointment.py` | L173–L198 | Listados como objetos Appointment |
+| `_enriquecer_cita_dashboard` eliminado de dashboard.py | `app/routes/dashboard.py` | L80 | Migrado como `apt.enriquecer_dashboard()` |
+| `_enrich_appointment` eliminado de appointments.py | `app/routes/api/appointments.py` | L7–L14 | Migrado como `apt.enriquecer_api()` |
+| `conv_id = conv.id` en webhook | `app/routes/webhook.py` | L83 | Atributo de instancia en lugar de `str(conv['_id'])` |
+| `conv.contact_name` en webhook | `app/routes/webhook.py` | L87 | Atributo en lugar de `conv.get('contact_name')` |
+| `msg.id` en webhook update | `app/routes/webhook.py` | L122 | `ObjectId(msg.id)` en lugar de `msg['_id']` |
+| `[p.to_dict() for p in pets]` en pets routes | `app/routes/api/pets.py` | L13 | Reemplaza `serialize_docs(pets)` |
+| `pet.to_dict()` en pets routes | `app/routes/api/pets.py` | L34, L61, L84 | Reemplaza `serialize_doc(pet)` |
+| `[apt.enriquecer_api() for apt in apts]` | `app/routes/api/appointments.py` | L29, L39 | Método de objeto en lugar de función suelta |
+| `[c.to_dict() for c in conversations]` | `app/routes/api/conversations.py` | L24 | Reemplaza `serialize_docs(conversations)` |
+| `conv.to_dict()` en conversations routes | `app/routes/api/conversations.py` | L35, L71 | Reemplaza `serialize_doc(conv)` |
+| `conv.phone_number` en messages route | `app/routes/api/messages.py` | L58 | Atributo de instancia en lugar de `conv['phone_number']` |
+| `msg.to_dict()` en messages route | `app/routes/api/messages.py` | L69 | Reemplaza `serialize_doc(msg)` |
+| `[m.to_dict() for m in messages]` | `app/routes/api/messages.py` | L31 | Reemplaza `serialize_docs(messages)` |
+| `msg.to_dict()` / `conv.to_dict()` en helpers | `app/utils/helpers.py` | L111, L113 | Socket.IO emite dicts serializados desde instancias |
+
+**Funciones NO migradas a clases (justificación):**
+| Función | Módulo | Razón |
+|---------|--------|-------|
+| `validar_campos_requeridos` | `app/utils/helpers.py` | Transversal — valida cualquier dict de cualquier entidad |
+| `_coincide` (lambda) | `app/services/nlp.py` | Transversal — opera sobre texto, no sobre entidades del CRM |
+| `detectar_intencion` | `app/services/nlp.py` | Procesa texto puro (str), no instancias de entidad |
+| `generar_respuesta` | `app/services/nlp.py` | Lookup table de intenciones, no pertenece a ninguna entidad |
+
+**Cómo encontrarlo:**
+```bash
+grep -rn "\[GUÍA 9" app/
+grep -rn "\[GUÍA 9 - ACTIVIDAD 1\]" app/
+grep -rn "\[GUÍA 9 - ACTIVIDAD 2\]" app/
+grep -rn "\[GUÍA 9 - ACTIVIDAD 3\]" app/
+```
+
+**Ejemplo real — Actividad 1 (`__init__` + `from_db` + `to_dict`):**
+```python
+# app/models/pet.py
+class Pet(BaseModel):
+    def __init__(self, name, species, breed, age_years, weight_kg,
+                 owner_phone, owner_name='', id=None, ...):
+        self._owner_phone = owner_phone  # PII — prefijo _
+
+    @classmethod
+    def from_db(cls, document):  # Puente MongoDB → objeto Python
+        return cls(id=str(document['_id']), name=document.get('name'), ...)
+
+    def to_dict(self):  # Puente objeto Python → JSON
+        return {'_id': self.id, 'name': self.name, 'owner_phone': self._owner_phone, ...}
+```
+
+**Ejemplo real — Actividad 2 (`@property` con setter y método migrado):**
+```python
+# app/models/pet.py
+@property
+def owner_phone(self) -> str:
+    return self._owner_phone
+
+@owner_phone.setter
+def owner_phone(self, value: str):
+    if not value or not isinstance(value, str):
+        raise ValueError("owner_phone debe ser un string no vacío")
+    self._owner_phone = value.strip()
+
+# app/models/appointment.py — método migrado desde dashboard.py
+def enriquecer_dashboard(self) -> dict:
+    pet = Pet.find_by_id(self.pet_id)
+    result = self.to_dict()
+    result['pet_name'] = pet.name if pet else 'Desconocida'
+    return result
+```
+
+**Ejemplo real — Actividad 3 (motor lógico invoca métodos del objeto):**
+```python
+# app/routes/dashboard.py — antes: función suelta _enriquecer_cita_dashboard(apt)
+upcoming_appointments = list(map(
+    lambda doc: Appointment.from_db(doc).enriquecer_dashboard(),
+    upcoming_apts_docs
+))
+
+# app/routes/webhook.py — antes: str(conv['_id']), conv.get('contact_name')
+conv = Conversation.find_or_create(phone, contact_name)  # retorna instancia
+conv_id = conv.id        # atributo de instancia
+if contact_name and not conv.contact_name:  # property en lugar de dict lookup
+    Conversation.update(conv_id, {'contact_name': contact_name})
+```
+
+---
+
 ## Patrones de Búsqueda
 
 ```bash
@@ -507,6 +648,7 @@ grep -rn "\[GUÍA" app/
 | Guía 6 — Arrays & Matrices | ✅ | ✅ | ✅ |
 | Guía 7 — Subalgoritmos & Lambdas | ✅ | ✅ | ✅ |
 | Guía 8 — Data Persistence | ✅ | ✅ | ✅ |
+| Guía 9 — POO Nivel I | ✅ | ✅ | ✅ |
 
 ---
 
@@ -519,11 +661,13 @@ CONNECTA_Pets/
 │   ├── models/
 │   │   ├── appointment.py     → GUÍA 2 (Act 1, 3, 4), GUÍA 3 (Act 1, 3), GUÍA 6 (Act 1)
 │   │   ├── conversation.py    → GUÍA 2 (Act 1, 3, 4), GUÍA 3 (Act 1), GUÍA 5 (Act 4), GUÍA 6 (Act 2)
-│   │   ├── pet.py             → GUÍA 2 (Act 1, 3)
-│   │   ├── message.py         → (serialización via helpers)
+│   │   ├── pet.py             → GUÍA 2 (Act 1, 3), GUÍA 9 (Act 1, 2, 3)
+│   │   ├── appointment.py     → GUÍA 2 (Act 1, 3, 4), GUÍA 3 (Act 1, 3), GUÍA 6 (Act 1), GUÍA 9 (Act 1, 2, 3)
+│   │   ├── conversation.py    → GUÍA 2 (Act 1, 3, 4), GUÍA 3 (Act 1), GUÍA 5 (Act 4), GUÍA 6 (Act 2), GUÍA 9 (Act 1, 2, 3)
+│   │   ├── message.py         → GUÍA 9 (Act 1, 2, 3)
 │   │   ├── label.py           → (uso en conversations API)
 │   │   ├── settings.py        → (uso en whatsapp service)
-│   │   └── user.py            → (auth, bool is_active)
+│   │   └── user.py            → (auth, bool is_active, referencia POO Flask-Login)
 │   │
 │   ├── routes/
 │   │   ├── dashboard.py       → GUÍA 2 (Act 1, 3, 4, 5), GUÍA 5 (Act 1, 4, 5), GUÍA 6 (Act 3)
